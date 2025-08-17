@@ -26,6 +26,8 @@ interface Movie {
 export default function HomePage() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [tvSeries, setTvSeries] = useState<Movie[]>([])
+  const [heroMovies, setHeroMovies] = useState<Movie[]>([])
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Movie[]>([])
@@ -34,19 +36,34 @@ export default function HomePage() {
     fetchMovies()
   }, [])
 
+  useEffect(() => {
+    if (heroMovies.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentHeroIndex((prev) => (prev + 1) % heroMovies.length)
+      }, 5000)
+      return () => clearInterval(interval)
+    }
+  }, [heroMovies.length])
+
   const fetchMovies = async () => {
     try {
       const response = await fetch("https://movie-database-real-working-mx21.vercel.app/media")
       const data = await response.json()
       if (data.status === "success") {
         const allMedia = data.data
+
+        const allMovies = allMedia.filter((item: Movie) => item.type === "movie")
+        const sortedMovies = allMovies.sort(
+          (a: Movie, b: Movie) =>
+            new Date(b.release_date || "1900-01-01").getTime() - new Date(a.release_date || "1900-01-01").getTime(),
+        )
+        setHeroMovies(sortedMovies.slice(0, 7))
+
         const movies2025 = allMedia.filter(
           (item: Movie) => item.type === "movie" && item.release_date?.includes("2025"),
         )
         const tv2025 = allMedia.filter((item: Movie) => item.type === "tv" && item.release_date?.includes("2025"))
 
-        // Fallback to all movies/TV if no 2025 content found
-        const allMovies = allMedia.filter((item: Movie) => item.type === "movie")
         const allTV = allMedia.filter((item: Movie) => item.type === "tv")
 
         setMovies(movies2025.length > 0 ? movies2025 : allMovies.slice(0, 20))
@@ -54,6 +71,7 @@ export default function HomePage() {
 
         console.log("[v0] Movies loaded:", movies2025.length > 0 ? movies2025.length : allMovies.length)
         console.log("[v0] TV Series loaded:", tv2025.length > 0 ? tv2025.length : allTV.length)
+        console.log("[v0] Hero movies loaded:", sortedMovies.slice(0, 7).length)
       }
     } catch (error) {
       console.error("Error fetching movies:", error)
@@ -287,25 +305,77 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-green-900/20 to-black py-8 md:py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-green-400">Welcome to Filmzi</h2>
-          <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8">
-            Stream & Download Movies and TV Series in HD Quality
-          </p>
-          <div className="flex flex-col md:flex-row justify-center space-y-2 md:space-y-0 md:space-x-4">
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
-              <span className="text-green-400 font-semibold text-sm md:text-base">720p & 1080p Quality</span>
-            </div>
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
-              <span className="text-green-400 font-semibold text-sm md:text-base">Free Streaming</span>
-            </div>
-            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
-              <span className="text-green-400 font-semibold text-sm md:text-base">Latest Releases</span>
+      {!searchQuery && heroMovies.length > 0 && (
+        <section className="relative h-[50vh] md:h-[70vh] overflow-hidden">
+          <div className="absolute inset-0">
+            <Image
+              src={heroMovies[currentHeroIndex]?.poster_url || "/placeholder.svg"}
+              alt={heroMovies[currentHeroIndex]?.title || "Hero Movie"}
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent"></div>
+          </div>
+
+          <div className="relative z-10 container mx-auto px-4 h-full flex items-center">
+            <div className="max-w-2xl">
+              <h2 className="text-4xl md:text-6xl font-bold mb-4 text-white">{heroMovies[currentHeroIndex]?.title}</h2>
+              <p className="text-lg md:text-xl text-gray-300 mb-6 line-clamp-3">
+                {heroMovies[currentHeroIndex]?.description}
+              </p>
+              <div className="flex flex-col md:flex-row gap-4">
+                <Link href={`/movie/${heroMovies[currentHeroIndex]?.id}`}>
+                  <Button className="bg-green-500 hover:bg-green-600 text-black font-semibold px-8 py-3">
+                    <Play className="w-5 h-5 mr-2" />
+                    Watch Now
+                  </Button>
+                </Link>
+                <Button
+                  variant="outline"
+                  className="border-white/30 text-white hover:bg-white/10 bg-transparent px-8 py-3"
+                >
+                  More Info
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+
+          {/* Hero Navigation Dots */}
+          <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            {heroMovies.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentHeroIndex(index)}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  index === currentHeroIndex ? "bg-green-500" : "bg-white/30 hover:bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!searchQuery && heroMovies.length === 0 && (
+        <section className="bg-gradient-to-b from-green-900/20 to-black py-8 md:py-16">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-green-400">Welcome to Filmzi</h2>
+            <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8">
+              Stream & Download Movies and TV Series in HD Quality
+            </p>
+            <div className="flex flex-col md:flex-row justify-center space-y-2 md:space-y-0 md:space-x-4">
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
+                <span className="text-green-400 font-semibold text-sm md:text-base">720p & 1080p Quality</span>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
+                <span className="text-green-400 font-semibold text-sm md:text-base">Free Streaming</span>
+              </div>
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
+                <span className="text-green-400 font-semibold text-sm md:text-base">Latest Releases</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {searchQuery ? (
         <section className="py-8 md:py-12">

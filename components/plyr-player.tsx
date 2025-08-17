@@ -92,9 +92,12 @@ const Player = ({ sources = [], poster = null }) => {
   if (!isPlyrLoaded && !plyrError) {
     return (
       <div className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="aspect-video flex items-center justify-center">
-          <div className="text-green-400">Loading player...</div>
-        </div>
+        <video ref={videoRef} poster={poster} controls playsInline className="w-full">
+          {videoSources.map((source, index) => (
+            <source key={index} src={source.src} type={source.type} />
+          ))}
+          Your browser doesn't support HTML5 video.
+        </video>
       </div>
     )
   }
