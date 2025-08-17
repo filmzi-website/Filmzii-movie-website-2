@@ -60,21 +60,8 @@ export default function TVSeriesDetailsPage() {
       console.log("[v0] Response data:", data.data)
 
       if (data.status === "success" && data.data) {
-        console.log("[v0] Data found, checking if it has TV series characteristics")
-        const mediaData = data.data
-
-        // Check if it has TV series characteristics (seasons, episodes, or type)
-        const hasSeasons = mediaData.seasons && Object.keys(mediaData.seasons).length > 0
-        const hasTotalSeasons = mediaData.total_seasons && mediaData.total_seasons > 0
-        const isTypeTV = mediaData.type === "tv" || mediaData.type === "series"
-
-        if (hasSeasons || hasTotalSeasons || isTypeTV) {
-          console.log("[v0] TV series data confirmed, setting as valid")
-          setTVSeries(mediaData)
-        } else {
-          console.log("[v0] Data exists but doesn't appear to be TV series:", mediaData)
-          setError("This content is not a TV series")
-        }
+        console.log("[v0] Data found, accepting as TV series since accessed via /tv/ route")
+        setTVSeries(data.data)
       } else {
         console.log("[v0] API error or no data:", data)
         setError("TV Series not found")

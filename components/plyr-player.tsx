@@ -18,12 +18,13 @@ const Player = ({ sources = [], poster = null }) => {
   const videoSources = sources.length > 0 ? sources : defaultSources
 
   useEffect(() => {
-    const initializePlyr = async () => {
-      if (!videoRef.current) return
+    if (!videoRef.current) return
 
+    const initializePlyr = () => {
       try {
-        const Plyr = (await import("plyr")).default
-        await import("plyr/dist/plyr.css")
+        // Import Plyr synchronously if available
+        const Plyr = require("plyr")
+        require("plyr/dist/plyr.css")
 
         // Initialize Plyr player
         playerRef.current = new Plyr(videoRef.current, {
@@ -56,16 +57,18 @@ const Player = ({ sources = [], poster = null }) => {
           storage: { enabled: true, key: "plyr" },
         })
 
+        // Auto-play when ready (if permitted)
         playerRef.current.on("ready", () => {
           playerRef.current.play().catch((e) => {
             console.log("Auto-play prevented:", e)
           })
         })
       } catch (error) {
-        console.error("Failed to initialize Plyr:", error)
+        console.error("Plyr not available, using HTML5 video:", error)
       }
     }
 
+    // Initialize immediately
     initializePlyr()
 
     // Clean up on unmount
@@ -82,7 +85,6 @@ const Player = ({ sources = [], poster = null }) => {
         {videoSources.map((source, index) => (
           <source key={index} src={source.src} type={source.type} size={source.size} />
         ))}
-        {/* Fallback text */}
         <track kind="captions" label="English" srcLang="en" default />
         Your browser doesn't support HTML5 video.
       </video>
