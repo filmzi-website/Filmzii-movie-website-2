@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import Plyr from "plyr"
 import "plyr/dist/plyr.css"
+import Image from "next/image"
 
 interface VideoSource {
   src: string
@@ -17,10 +18,11 @@ interface PlayerProps {
 
 const PlyrPlayer = ({ sources = [], poster = null }: PlayerProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
   const playerInstance = useRef<Plyr | null>(null)
-  const [isInitialized, setIsInitialized] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [userActivated, setUserActivated] = useState(false)
+  const [isReady, setIsReady] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const defaultSources: VideoSource[] = [
     {
@@ -33,82 +35,97 @@ const PlyrPlayer = ({ sources = [], poster = null }: PlayerProps) => {
   const videoSources = sources.length > 0 ? sources : defaultSources
 
   const initializePlayer = () => {
-    if (!containerRef.current || isInitialized) return
+    if (!containerRef.current || !videoRef.current || playerInstance.current) return
+
+    setIsLoading(true)
     
-    setUserActivated(true)
-    setLoading(true)
-    
-    const videoElement = document.createElement("video")
-    videoElement.playsInline = true
-    if (poster) videoElement.poster = poster
-
-    videoElement.addEventListener('waiting', () => setLoading(true))
-    videoElement.addEventListener('playing', () => setLoading(false))
-    videoElement.addEventListener('error', () => setLoading(false))
-
-    videoSources.forEach((source) => {
-      const sourceElement = document.createElement("source")
-      sourceElement.src = source.src
-      sourceElement.type = source.type
-      if (source.size) {
-        sourceElement.setAttribute("size", source.size.toString())
-      }
-      videoElement.appendChild(sourceElement)
-    })
-
-    containerRef.current.innerHTML = ""
-    containerRef.current.appendChild(videoElement)
-
-    playerInstance.current = new Plyr(videoElement, {
-      controls: [
-        "play-large", "play", "progress", "current-time", 
-        "mute", "volume", "captions", "settings", 
-        "pip", "airplay", "fullscreen"
-      ],
-      settings: ["quality", "speed"],
-      quality: {
-        default: videoSources[0]?.size || 720,
-        options: videoSources.map((source) => source.size),
-      },
-      speed: {
-        selected: 1,
-        options: [0.5, 0.75, 1, 1.25, 1.5, 2],
-      },
-    })
-
-    playerInstance.current.on("ready", () => {
-      setIsInitialized(true)
-      setLoading(false)
-      playerInstance.current?.play().catch(() => { 
-        // Autoplay prevented, but player is ready
+    try {
+      playerInstance.current = new Plyr(videoRef.current, {
+        controls: [
+          "play-large", "play", "progress", "current-time", 
+          "mute", "volume", "captions", "settings", 
+          "pip", "airplay", "fullscreen"
+        ],
+        settings: ["quality", "speed"],
+        quality: {
+          default: videoSources[0]?.size || 720,
+          options: videoSources.map((source) => source.size),
+        },
+        speed: {
+          selected: 1,
+          options: [0.5, 0.75, 1, 1.25, 1.5, 2],
+        },
       })
-    })
 
-    playerInstance.current.on("play", () => {
-      setLoading(false)
+      playerInstance.current.on("ready", () => {
+        setIsReady(true)
+        setIsLoading(false)
+      })
+
+      playerInstance.current.on("play", () => setIsPlaying(true))
+      playerInstance.current.on("pause", () => setIsPlaying(false))
+      playerInstance.current.on("waiting", () => setIsLoading(true))
+      playerInstance.current.on("playing", () => setIsLoading(false))
+      playerInstance.current.on("error", () => setIsLoading(false))
+
+    } catch (error) {
+      console.error("Player initialization error:", error)
+      setIsLoading(false)
+    }
+  }
+
+  const handlePlayClick = () => {
+    if (!isReady) {
+      initializePlayer()
+    }
+    playerInstance.current?.play().catch(error => {
+      console.log("Playback failed:", error)
     })
   }
 
   useEffect(() => {
     return () => {
       playerInstance.current?.destroy()
+      playerInstance.current = null
     }
   }, [])
 
   return (
     <div 
       ref={containerRef}
-      className="relative w-full bg-black rounded-lg overflow-hidden cursor-pointer"
+      className="relative w-full bg-black rounded-lg overflow-hidden"
       style={{ aspectRatio: "16/9" }}
-      onClick={!userActivated ? initializePlayer : undefined}
     >
-      {/* Poster with play button (before activation) */}
-      {!userActivated && poster && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <img 
-            src={poster} 
-            alt="Movie poster" 
-            className="absolute inset-0 w-full h-full object-cover"
+      {/* Video Element */}
+      <video
+        ref={videoRef}
+        poster={poster || undefined}
+        playsInline
+        controls={false}
+        className={`w-full h-full ${isReady ? 'block' : 'hidden'}`}
+      >
+        {videoSources.map((source, index) => (
+          <source
+            key={`source-${index}`}
+            src={source.src}
+            type={source.type}
+            size={source.size}
+          />
+        ))}
+      </video>
+
+      {/* Poster with Play Button */}
+      {(!isReady || !isPlaying) && poster && (
+        <div 
+          className="absolute inset-0 flex items-center justify-center cursor-pointer"
+          onClick={handlePlayClick}
+        >
+          <Image
+            src={poster}
+            alt="Movie poster"
+            fill
+            className="object-cover"
+            priority
           />
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
             <div className="w-20 h-20 bg-green-500/90 hover:bg-green-400 rounded-full flex items-center justify-center transition-all duration-300 transform hover:scale-110 z-10">
@@ -121,8 +138,8 @@ const PlyrPlayer = ({ sources = [], poster = null }: PlayerProps) => {
         </div>
       )}
 
-      {/* Loading overlay */}
-      {loading && (
+      {/* Loading Overlay */}
+      {isLoading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
           <div className="flex flex-col items-center">
             <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-3"></div>
