@@ -56,13 +56,30 @@ export default function TVSeriesDetailsPage() {
       const data = await response.json()
 
       console.log("[v0] TV series API response:", data)
+      console.log("[v0] Response status:", data.status)
+      console.log("[v0] Response data:", data.data)
+      console.log("[v0] Data type:", data.data?.type)
+      console.log("[v0] Has total_seasons:", !!data.data?.total_seasons)
+      console.log("[v0] Has seasons:", !!data.data?.seasons)
 
       if (data.status === "success" && data.data) {
-        if (data.data.type === "tv" || data.data.type === "series" || data.data.total_seasons) {
+        const isTV =
+          data.data.type === "tv" ||
+          data.data.type === "series" ||
+          data.data.type === "TV" ||
+          data.data.type === "TV Series" ||
+          data.data.total_seasons > 0 ||
+          data.data.seasons ||
+          (data.data.type && data.data.type.toLowerCase().includes("tv")) ||
+          (data.data.type && data.data.type.toLowerCase().includes("series"))
+
+        console.log("[v0] Is TV series check result:", isTV)
+
+        if (isTV) {
           setTVSeries(data.data)
         } else {
-          console.log("[v0] Not a TV series, type:", data.data.type)
-          setError("TV Series not found")
+          console.log("[v0] Not a TV series, type:", data.data.type, "total_seasons:", data.data.total_seasons)
+          setError("This content is not a TV series")
         }
       } else {
         console.log("[v0] API error or no data:", data)
