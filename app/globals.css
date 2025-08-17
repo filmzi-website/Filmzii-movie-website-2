@@ -121,7 +121,7 @@
     @apply bg-background text-foreground;
   }
 
-  /* Added scrollbar-hide utility and improved mobile scrolling */
+  /* Enhanced scrollbar styling and added smooth scrolling */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -131,22 +131,33 @@
     display: none;
   }
 
-  /* Added custom scrollbar styling and video player controls */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+
+  /* Enhanced custom scrollbar styling for better visibility */
   ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
   }
 
   ::-webkit-scrollbar-track {
     background: oklch(0.1 0 0);
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb {
     background: oklch(0.7 0.2 142);
     border-radius: 4px;
+    border: 1px solid oklch(0.05 0 0);
   }
 
   ::-webkit-scrollbar-thumb:hover {
     background: oklch(0.6 0.2 142);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: oklch(0.1 0 0);
   }
 
   /* Custom video player slider styles */
@@ -188,7 +199,7 @@
     border: none;
   }
 
-  /* Added mobile-specific improvements */
+  /* Added mobile touch improvements for better scrolling */
   @media (max-width: 768px) {
     .slider::-webkit-slider-thumb {
       width: 20px;
@@ -198,6 +209,16 @@
     .slider::-moz-range-thumb {
       width: 20px;
       height: 20px;
+    }
+
+    /* Improve touch scrolling on mobile */
+    .overflow-x-auto {
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+    }
+
+    .flex-none {
+      scroll-snap-align: start;
     }
   }
 }

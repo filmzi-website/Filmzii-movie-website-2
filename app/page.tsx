@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Download, Play, MessageCircle, Send } from "lucide-react"
+import { Search, Download, Play, MessageCircle, Send, ChevronLeft, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -74,86 +74,128 @@ export default function HomePage() {
     }
   }
 
-  const MovieRow = ({ title, items, loading }: { title: string; items: Movie[]; loading: boolean }) => (
-    <section className="py-6">
-      <div className="container mx-auto px-4">
-        <h3 className="text-2xl md:text-3xl font-bold mb-6 text-green-400">{title}</h3>
+  const MovieRow = ({ title, items, loading }: { title: string; items: Movie[]; loading: boolean }) => {
+    const scrollRef = useRef<HTMLDivElement>(null)
 
-        {loading ? (
-          <div className="flex space-x-4 overflow-x-auto pb-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="flex-none w-40 md:w-48 animate-pulse">
-                <div className="bg-gray-800 aspect-[2/3] rounded-lg mb-3"></div>
-                <div className="bg-gray-800 h-4 rounded mb-2"></div>
-                <div className="bg-gray-800 h-3 rounded w-3/4"></div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
-            {items.map((movie) => (
-              <Card
-                key={movie.id}
-                className="flex-none w-40 md:w-48 bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group"
+    const scrollLeft = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollBy({ left: -300, behavior: "smooth" })
+      }
+    }
+
+    const scrollRight = () => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollBy({ left: 300, behavior: "smooth" })
+      }
+    }
+
+    return (
+      <section className="py-6">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-2xl md:text-3xl font-bold text-green-400">{title}</h3>
+            <div className="hidden md:flex space-x-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={scrollLeft}
+                className="h-10 w-10 border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
               >
-                <CardContent className="p-0">
-                  <div className="relative overflow-hidden rounded-t-lg">
-                    <Image
-                      src={movie.poster_url || "/placeholder.svg"}
-                      alt={movie.title}
-                      width={200}
-                      height={300}
-                      className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                      <div className="flex flex-col space-y-2">
-                        <Link href={`/${movie.type}/${movie.id}`}>
-                          <Button size="sm" className="bg-green-500 hover:bg-green-600 text-black w-full">
-                            <Play className="w-4 h-4 mr-1" />
-                            Watch
-                          </Button>
-                        </Link>
-                        {movie.video_links && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-green-500 text-green-400 hover:bg-green-500/10 bg-transparent w-full"
-                          >
-                            <Download className="w-4 h-4 mr-1" />
-                            Download
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                    <div className="absolute top-2 left-2">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded ${
-                          movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
-                        }`}
-                      >
-                        {movie.type === "movie" ? "Movie" : "TV"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-3">
-                    <h4 className="font-semibold text-white mb-1 text-sm line-clamp-2">{movie.title}</h4>
-                    <p className="text-xs text-gray-400 mb-1">{movie.release_date?.split("-")[0]}</p>
-                    <p className="text-xs text-green-400">{movie.language}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={scrollRight}
+                className="h-10 w-10 border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-        )}
 
-        {!loading && items.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-400">No content available.</p>
-          </div>
-        )}
-      </div>
-    </section>
-  )
+          {loading ? (
+            <div className="flex space-x-4 overflow-x-auto pb-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex-none w-40 md:w-48 animate-pulse">
+                  <div className="bg-gray-800 aspect-[2/3] rounded-lg mb-3"></div>
+                  <div className="bg-gray-800 h-4 rounded mb-2"></div>
+                  <div className="bg-gray-800 h-3 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div ref={scrollRef} className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth">
+              {items.map((movie) => (
+                <Link key={movie.id} href={`/${movie.type}/${movie.id}`} className="flex-none">
+                  <Card className="w-40 md:w-48 bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group cursor-pointer">
+                    <CardContent className="p-0">
+                      <div className="relative overflow-hidden rounded-t-lg">
+                        <Image
+                          src={movie.poster_url || "/placeholder.svg"}
+                          alt={movie.title}
+                          width={200}
+                          height={300}
+                          className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <div className="flex flex-col space-y-2">
+                            <Button
+                              size="sm"
+                              className="bg-green-500 hover:bg-green-600 text-black w-full"
+                              onClick={(e) => e.preventDefault()} // Prevent double navigation
+                            >
+                              <Play className="w-4 h-4 mr-1" />
+                              Watch
+                            </Button>
+                            {movie.video_links && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-500 text-green-400 hover:bg-green-500/10 bg-transparent w-full"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  // Handle download logic here
+                                }}
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Download
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="absolute top-2 left-2">
+                          <span
+                            className={`px-2 py-1 text-xs font-semibold rounded ${
+                              movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
+                            }`}
+                          >
+                            {movie.type === "movie" ? "Movie" : "TV"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <h4 className="font-semibold text-white mb-1 text-sm line-clamp-2">{movie.title}</h4>
+                        <p className="text-xs text-gray-400 mb-1">{movie.release_date?.split("-")[0]}</p>
+                        <p className="text-xs text-green-400">{movie.language}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {!loading && items.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-gray-400">No content available.</p>
+            </div>
+          )}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -278,58 +320,63 @@ export default function HomePage() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
                 {searchResults.map((movie) => (
-                  <Card
-                    key={movie.id}
-                    className="bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group"
-                  >
-                    <CardContent className="p-0">
-                      <div className="relative overflow-hidden rounded-t-lg">
-                        <Image
-                          src={movie.poster_url || "/placeholder.svg"}
-                          alt={movie.title}
-                          width={300}
-                          height={450}
-                          className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                          <div className="flex space-x-2">
-                            <Link href={`/${movie.type}/${movie.id}`}>
-                              <Button size="sm" className="bg-green-500 hover:bg-green-600 text-black">
+                  <Link key={movie.id} href={`/${movie.type}/${movie.id}`}>
+                    <Card className="bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group cursor-pointer">
+                      <CardContent className="p-0">
+                        <div className="relative overflow-hidden rounded-t-lg">
+                          <Image
+                            src={movie.poster_url || "/placeholder.svg"}
+                            alt={movie.title}
+                            width={300}
+                            height={450}
+                            className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <div className="flex space-x-2">
+                              <Button
+                                size="sm"
+                                className="bg-green-500 hover:bg-green-600 text-black"
+                                onClick={(e) => e.preventDefault()}
+                              >
                                 <Play className="w-4 h-4 mr-1" />
                                 Watch
                               </Button>
-                            </Link>
-                            {movie.video_links && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="border-green-500 text-green-400 hover:bg-green-500/10 bg-transparent"
-                              >
-                                <Download className="w-4 h-4 mr-1" />
-                                Download
-                              </Button>
-                            )}
+                              {movie.video_links && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-green-500 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                  }}
+                                >
+                                  <Download className="w-4 h-4 mr-1" />
+                                  Download
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="absolute top-2 left-2">
+                            <span
+                              className={`px-2 py-1 text-xs font-semibold rounded ${
+                                movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
+                              }`}
+                            >
+                              {movie.type === "movie" ? "Movie" : "TV Series"}
+                            </span>
                           </div>
                         </div>
-                        <div className="absolute top-2 left-2">
-                          <span
-                            className={`px-2 py-1 text-xs font-semibold rounded ${
-                              movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
-                            }`}
-                          >
-                            {movie.type === "movie" ? "Movie" : "TV Series"}
-                          </span>
+                        <div className="p-3 md:p-4">
+                          <h4 className="font-semibold text-white mb-2 line-clamp-2 text-sm md:text-base">
+                            {movie.title}
+                          </h4>
+                          <p className="text-xs md:text-sm text-gray-400 mb-2">{movie.release_date?.split("-")[0]}</p>
+                          <p className="text-xs text-green-400">{movie.language}</p>
                         </div>
-                      </div>
-                      <div className="p-3 md:p-4">
-                        <h4 className="font-semibold text-white mb-2 line-clamp-2 text-sm md:text-base">
-                          {movie.title}
-                        </h4>
-                        <p className="text-xs md:text-sm text-gray-400 mb-2">{movie.release_date?.split("-")[0]}</p>
-                        <p className="text-xs text-green-400">{movie.language}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             )}
