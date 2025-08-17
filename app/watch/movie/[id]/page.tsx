@@ -46,7 +46,7 @@ export default function WatchMoviePage() {
   const fetchMovieDetails = async (id: string) => {
     try {
       setLoading(true)
-      const response = await fetch(`https://movie-database-real-working-mx21.vercel.app/media/${id}`)
+      const response = await fetch(`https://movie-database-nu-ashen.vercel.app/media/${id}`)
       const data = await response.json()
 
       if (data.status === "success") {
