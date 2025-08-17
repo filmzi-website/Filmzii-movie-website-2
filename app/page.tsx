@@ -1,0 +1,389 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Search, Download, Play, MessageCircle, Send } from "lucide-react"
+import Link from "next/link"
+import Image from "next/image"
+
+interface Movie {
+  id: number
+  type: "movie" | "tv"
+  title: string
+  description: string
+  poster_url: string
+  release_date: string
+  language: string
+  video_links?: {
+    "720p": string
+    "1080p": string
+  }
+  seasons?: any
+}
+
+export default function HomePage() {
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [tvSeries, setTvSeries] = useState<Movie[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<Movie[]>([])
+
+  useEffect(() => {
+    fetchMovies()
+  }, [])
+
+  const fetchMovies = async () => {
+    try {
+      const response = await fetch("https://movie-database-real-working-mx21.vercel.app/media")
+      const data = await response.json()
+      if (data.status === "success") {
+        const allMedia = data.data
+        const movies2025 = allMedia.filter(
+          (item: Movie) => item.type === "movie" && item.release_date?.includes("2025"),
+        )
+        const tv2025 = allMedia.filter((item: Movie) => item.type === "tv" && item.release_date?.includes("2025"))
+
+        setMovies(movies2025.length > 0 ? movies2025 : allMedia.filter((item: Movie) => item.type === "movie"))
+        setTvSeries(tv2025.length > 0 ? tv2025 : allMedia.filter((item: Movie) => item.type === "tv"))
+      }
+    } catch (error) {
+      console.error("Error fetching movies:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([])
+      return
+    }
+
+    try {
+      const response = await fetch(
+        `https://movie-database-real-working-mx21.vercel.app/search?q=${encodeURIComponent(query)}`,
+      )
+      const data = await response.json()
+      if (data.status === "success") {
+        setSearchResults(data.results)
+      }
+    } catch (error) {
+      console.error("Error searching:", error)
+    }
+  }
+
+  const MovieRow = ({ title, items, loading }: { title: string; items: Movie[]; loading: boolean }) => (
+    <section className="py-6">
+      <div className="container mx-auto px-4">
+        <h3 className="text-2xl md:text-3xl font-bold mb-6 text-green-400">{title}</h3>
+
+        {loading ? (
+          <div className="flex space-x-4 overflow-x-auto pb-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex-none w-40 md:w-48 animate-pulse">
+                <div className="bg-gray-800 aspect-[2/3] rounded-lg mb-3"></div>
+                <div className="bg-gray-800 h-4 rounded mb-2"></div>
+                <div className="bg-gray-800 h-3 rounded w-3/4"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
+            {items.map((movie) => (
+              <Card
+                key={movie.id}
+                className="flex-none w-40 md:w-48 bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group"
+              >
+                <CardContent className="p-0">
+                  <div className="relative overflow-hidden rounded-t-lg">
+                    <Image
+                      src={movie.poster_url || "/placeholder.svg"}
+                      alt={movie.title}
+                      width={200}
+                      height={300}
+                      className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <div className="flex flex-col space-y-2">
+                        <Link href={`/${movie.type}/${movie.id}`}>
+                          <Button size="sm" className="bg-green-500 hover:bg-green-600 text-black w-full">
+                            <Play className="w-4 h-4 mr-1" />
+                            Watch
+                          </Button>
+                        </Link>
+                        {movie.video_links && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-green-500 text-green-400 hover:bg-green-500/10 bg-transparent w-full"
+                          >
+                            <Download className="w-4 h-4 mr-1" />
+                            Download
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="absolute top-2 left-2">
+                      <span
+                        className={`px-2 py-1 text-xs font-semibold rounded ${
+                          movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
+                        }`}
+                      >
+                        {movie.type === "movie" ? "Movie" : "TV"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3">
+                    <h4 className="font-semibold text-white mb-1 text-sm line-clamp-2">{movie.title}</h4>
+                    <p className="text-xs text-gray-400 mb-1">{movie.release_date?.split("-")[0]}</p>
+                    <p className="text-xs text-green-400">{movie.language}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!loading && items.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-400">No content available.</p>
+          </div>
+        )}
+      </div>
+    </section>
+  )
+
+  return (
+    <div className="min-h-screen bg-black text-white">
+      {/* Header */}
+      <header className="border-b border-green-500/20 bg-black/90 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-3 md:py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2 md:space-x-3">
+              <Image
+                src="https://envs.sh/uiU.jpg"
+                alt="Filmzi Logo"
+                width={32}
+                height={32}
+                className="rounded-lg md:w-10 md:h-10"
+              />
+              <h1 className="text-xl md:text-2xl font-bold text-green-400">Filmzi</h1>
+            </div>
+
+            <div className="flex items-center space-x-2 md:space-x-4">
+              <div className="relative">
+                <Search className="absolute left-2 md:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    handleSearch(e.target.value)
+                  }}
+                  className="pl-8 md:pl-10 bg-gray-900 border-green-500/30 text-white placeholder-gray-400 focus:border-green-400 w-32 md:w-64 text-sm"
+                />
+              </div>
+
+              <div className="hidden md:flex items-center space-x-2">
+                <Link href="https://t.me/filmzi2" target="_blank">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+                  >
+                    <Send className="w-4 h-4 mr-1" />
+                    Telegram
+                  </Button>
+                </Link>
+                <Link href="https://chat.whatsapp.com/KNE7Dzo1eFcKDA2Q6oDfFO?mode=ac_t" target="_blank">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-1" />
+                    WhatsApp
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex md:hidden justify-center space-x-4 mt-3 pt-3 border-t border-green-500/20">
+            <Link href="https://t.me/filmzi2" target="_blank">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+              >
+                <Send className="w-4 h-4 mr-1" />
+                Telegram
+              </Button>
+            </Link>
+            <Link href="https://chat.whatsapp.com/KNE7Dzo1eFcKDA2Q6oDfFO?mode=ac_t" target="_blank">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+              >
+                <MessageCircle className="w-4 h-4 mr-1" />
+                WhatsApp
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className="bg-gradient-to-b from-green-900/20 to-black py-8 md:py-16">
+        <div className="container mx-auto px-4 text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-4 text-green-400">Welcome to Filmzi</h2>
+          <p className="text-lg md:text-xl text-gray-300 mb-6 md:mb-8">
+            Stream & Download Movies and TV Series in HD Quality
+          </p>
+          <div className="flex flex-col md:flex-row justify-center space-y-2 md:space-y-0 md:space-x-4">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
+              <span className="text-green-400 font-semibold text-sm md:text-base">720p & 1080p Quality</span>
+            </div>
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
+              <span className="text-green-400 font-semibold text-sm md:text-base">Free Streaming</span>
+            </div>
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg px-4 md:px-6 py-2 md:py-3">
+              <span className="text-green-400 font-semibold text-sm md:text-base">Latest Releases</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {searchQuery ? (
+        <section className="py-8 md:py-12">
+          <div className="container mx-auto px-4">
+            <h3 className="text-2xl md:text-3xl font-bold mb-6 md:mb-8 text-green-400">
+              Search Results for "{searchQuery}"
+            </h3>
+
+            {loading ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                {[...Array(10)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="bg-gray-800 aspect-[2/3] rounded-lg mb-3"></div>
+                    <div className="bg-gray-800 h-4 rounded mb-2"></div>
+                    <div className="bg-gray-800 h-3 rounded w-3/4"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
+                {searchResults.map((movie) => (
+                  <Card
+                    key={movie.id}
+                    className="bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group"
+                  >
+                    <CardContent className="p-0">
+                      <div className="relative overflow-hidden rounded-t-lg">
+                        <Image
+                          src={movie.poster_url || "/placeholder.svg"}
+                          alt={movie.title}
+                          width={300}
+                          height={450}
+                          className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <div className="flex space-x-2">
+                            <Link href={`/${movie.type}/${movie.id}`}>
+                              <Button size="sm" className="bg-green-500 hover:bg-green-600 text-black">
+                                <Play className="w-4 h-4 mr-1" />
+                                Watch
+                              </Button>
+                            </Link>
+                            {movie.video_links && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-green-500 text-green-400 hover:bg-green-500/10 bg-transparent"
+                              >
+                                <Download className="w-4 h-4 mr-1" />
+                                Download
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="absolute top-2 left-2">
+                          <span
+                            className={`px-2 py-1 text-xs font-semibold rounded ${
+                              movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
+                            }`}
+                          >
+                            {movie.type === "movie" ? "Movie" : "TV Series"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-3 md:p-4">
+                        <h4 className="font-semibold text-white mb-2 line-clamp-2 text-sm md:text-base">
+                          {movie.title}
+                        </h4>
+                        <p className="text-xs md:text-sm text-gray-400 mb-2">{movie.release_date?.split("-")[0]}</p>
+                        <p className="text-xs text-green-400">{movie.language}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+
+            {!loading && searchResults.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-400 text-lg">No results found for your search.</p>
+              </div>
+            )}
+          </div>
+        </section>
+      ) : (
+        <>
+          <MovieRow title="Latest Movies 2025" items={movies} loading={loading} />
+          <MovieRow title="Latest TV Series 2025" items={tvSeries} loading={loading} />
+        </>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-gray-900 border-t border-green-500/20 py-8 mt-16">
+        <div className="container mx-auto px-4">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <Image src="https://envs.sh/uiU.jpg" alt="Filmzi Logo" width={32} height={32} className="rounded-lg" />
+              <h3 className="text-xl font-bold text-green-400">Filmzi</h3>
+            </div>
+
+            <div className="flex justify-center space-x-6 mb-6">
+              <Link
+                href="https://t.me/filmzi2"
+                target="_blank"
+                className="text-green-400 hover:text-green-300 transition-colors"
+              >
+                <Send className="w-5 h-5" />
+              </Link>
+              <Link
+                href="https://chat.whatsapp.com/KNE7Dzo1eFcKDA2Q6oDfFO?mode=ac_t"
+                target="_blank"
+                className="text-green-400 hover:text-green-300 transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+              </Link>
+            </div>
+
+            <div className="border-t border-green-500/20 pt-6">
+              <p className="text-gray-400 text-sm mb-2">© 2025 Filmzi. All rights reserved.</p>
+              <p className="text-gray-500 text-xs max-w-2xl mx-auto">
+                Our website does not host any movie links or movies on our servers. Everything is from third party
+                sources. We are not responsible for any content.
+              </p>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}
