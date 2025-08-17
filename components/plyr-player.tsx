@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import Plyr from "plyr"
 import "plyr/dist/plyr.css"
 
@@ -15,10 +15,10 @@ interface PlayerProps {
   poster?: string | null
 }
 
-const Player = ({ sources = [], poster = null }: PlayerProps) => {
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const playerInstance = useRef<Plyr | null>(null)
+const PlyrPlayer = ({ sources = [], poster = null }: PlayerProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
+  const playerInstance = useRef<Plyr | null>(null)
+  const [isReady, setIsReady] = useState(false)
 
   // Default sources if none provided
   const defaultSources: VideoSource[] = [
@@ -32,10 +32,36 @@ const Player = ({ sources = [], poster = null }: PlayerProps) => {
   const videoSources = sources.length > 0 ? sources : defaultSources
 
   useEffect(() => {
-    if (!videoRef.current || !containerRef.current) return
+    if (!containerRef.current) return
 
-    // Initialize Plyr player
-    playerInstance.current = new Plyr(videoRef.current, {
+    // Clean up previous instance
+    if (playerInstance.current) {
+      playerInstance.current.destroy()
+      playerInstance.current = null
+    }
+
+    // Create video element
+    const videoElement = document.createElement("video")
+    videoElement.playsInline = true
+    if (poster) videoElement.poster = poster
+
+    // Add sources
+    videoSources.forEach((source) => {
+      const sourceElement = document.createElement("source")
+      sourceElement.src = source.src
+      sourceElement.type = source.type
+      if (source.size) {
+        sourceElement.setAttribute("size", source.size.toString())
+      }
+      videoElement.appendChild(sourceElement)
+    })
+
+    // Add to DOM
+    containerRef.current.innerHTML = ""
+    containerRef.current.appendChild(videoElement)
+
+    // Initialize Plyr
+    playerInstance.current = new Plyr(videoElement, {
       controls: [
         "play-large",
         "play",
@@ -62,46 +88,34 @@ const Player = ({ sources = [], poster = null }: PlayerProps) => {
       fullscreen: { enabled: true, iosNative: false },
     })
 
-    // Handle autoplay
+    // Handle ready state
     playerInstance.current.on("ready", () => {
-      // Hide HTML5 video element until Plyr is ready
-      containerRef.current?.classList.remove('opacity-0')
-      playerInstance.current?.play().catch((e) => {
-        console.log("Auto-play prevented:", e)
+      setIsReady(true)
+      // Attempt autoplay (will fail without user interaction)
+      playerInstance.current?.play().catch(() => {
+        // Autoplay was prevented, this is normal
       })
     })
 
-    // Clean up on unmount
+    // Handle errors
+    playerInstance.current.on("error", (event) => {
+      console.error("Plyr error:", event.detail)
+    })
+
+    // Clean up
     return () => {
       playerInstance.current?.destroy()
       playerInstance.current = null
     }
-  }, [videoSources])
+  }, [videoSources, poster])
 
   return (
     <div 
       ref={containerRef}
-      className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl opacity-0 transition-opacity duration-300"
-    >
-      <video
-        ref={videoRef}
-        poster={poster || undefined}
-        playsInline
-        controls={false}
-        className="w-full"
-      >
-        {videoSources.map((source, index) => (
-          <source
-            key={`source-${index}`}
-            src={source.src}
-            type={source.type}
-            size={source.size}
-          />
-        ))}
-        {/* Removed HTML5 fallback text to prevent blurry overlay */}
-      </video>
-    </div>
+      className={`relative w-full bg-black rounded-lg overflow-hidden transition-opacity duration-300 ${isReady ? "opacity-100" : "opacity-0"}`}
+      style={{ aspectRatio: "16/9" }}
+    />
   )
 }
 
-export default Player
+export default PlyrPlayer
