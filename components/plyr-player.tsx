@@ -18,6 +18,7 @@ interface PlayerProps {
 const Player = ({ sources = [], poster = null }: PlayerProps) => {
   const videoRef = useRef<HTMLVideoElement>(null)
   const playerInstance = useRef<Plyr | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Default sources if none provided
   const defaultSources: VideoSource[] = [
@@ -31,7 +32,7 @@ const Player = ({ sources = [], poster = null }: PlayerProps) => {
   const videoSources = sources.length > 0 ? sources : defaultSources
 
   useEffect(() => {
-    if (!videoRef.current) return
+    if (!videoRef.current || !containerRef.current) return
 
     // Initialize Plyr player
     playerInstance.current = new Plyr(videoRef.current, {
@@ -63,6 +64,8 @@ const Player = ({ sources = [], poster = null }: PlayerProps) => {
 
     // Handle autoplay
     playerInstance.current.on("ready", () => {
+      // Hide HTML5 video element until Plyr is ready
+      containerRef.current?.classList.remove('opacity-0')
       playerInstance.current?.play().catch((e) => {
         console.log("Auto-play prevented:", e)
       })
@@ -76,12 +79,15 @@ const Player = ({ sources = [], poster = null }: PlayerProps) => {
   }, [videoSources])
 
   return (
-    <div className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl">
+    <div 
+      ref={containerRef}
+      className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl opacity-0 transition-opacity duration-300"
+    >
       <video
         ref={videoRef}
         poster={poster || undefined}
         playsInline
-        controls={false} // Crucial: Plyr will handle controls
+        controls={false}
         className="w-full"
       >
         {videoSources.map((source, index) => (
@@ -92,8 +98,7 @@ const Player = ({ sources = [], poster = null }: PlayerProps) => {
             size={source.size}
           />
         ))}
-        <track kind="captions" label="English" srcLang="en" default />
-        Your browser doesn't support HTML5 video.
+        {/* Removed HTML5 fallback text to prevent blurry overlay */}
       </video>
     </div>
   )
