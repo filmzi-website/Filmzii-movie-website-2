@@ -52,7 +52,7 @@ export default function TVSeriesDetailsPage() {
   const fetchTVSeriesDetails = async (id: string) => {
     try {
       console.log("[v0] Fetching TV series details for ID:", id)
-      const response = await fetch(`https://movie-database-real-working-mx21.vercel.app/media/${id}`)
+      const response = await fetch(`https://movie-database-nu-ashen.vercel.app/media/${id}`)
       const data = await response.json()
 
       console.log("[v0] TV series API response:", data)
