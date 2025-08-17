@@ -1,11 +1,9 @@
 "use client"
-
-import type React from "react"
-
-import { useState, useEffect, useRef } from "react"
+import PlyrPlayer from "@/components/plyr-player"
+import { useState, useEffect } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, Maximize, Volume2, Settings } from "lucide-react"
+import { ArrowLeft, Download } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -25,17 +23,10 @@ export default function WatchMoviePage() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
-  const videoRef = useRef<HTMLVideoElement>(null)
   const [movie, setMovie] = useState<Movie | null>(null)
   const [loading, setLoading] = useState(true)
   const [videoUrl, setVideoUrl] = useState<string>("")
   const [currentQuality, setCurrentQuality] = useState<string>("720p")
-  const [showQualityMenu, setShowQualityMenu] = useState(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState(1)
-  const [isFullscreen, setIsFullscreen] = useState(false)
 
   useEffect(() => {
     const url = searchParams.get("url")
@@ -66,88 +57,6 @@ export default function WatchMoviePage() {
     } finally {
       setLoading(false)
     }
-  }
-
-  const switchQuality = (quality: string) => {
-    if (movie?.video_links && videoRef.current) {
-      const currentTime = videoRef.current.currentTime
-      const wasPlaying = !videoRef.current.paused
-
-      setVideoUrl(movie.video_links[quality as keyof typeof movie.video_links] || "")
-      setCurrentQuality(quality)
-      setShowQualityMenu(false)
-
-      // Restore playback position after quality change
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.currentTime = currentTime
-          if (wasPlaying) {
-            videoRef.current.play()
-          }
-        }
-      }, 100)
-    }
-  }
-
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause()
-      } else {
-        videoRef.current.play()
-      }
-      setIsPlaying(!isPlaying)
-    }
-  }
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      setCurrentTime(videoRef.current.currentTime)
-    }
-  }
-
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setDuration(videoRef.current.duration)
-    }
-  }
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = Number.parseFloat(e.target.value)
-    if (videoRef.current) {
-      videoRef.current.currentTime = time
-      setCurrentTime(time)
-    }
-  }
-
-  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const vol = Number.parseFloat(e.target.value)
-    setVolume(vol)
-    if (videoRef.current) {
-      videoRef.current.volume = vol
-    }
-  }
-
-  const toggleFullscreen = () => {
-    if (videoRef.current) {
-      if (!isFullscreen) {
-        videoRef.current.requestFullscreen()
-      } else {
-        document.exitFullscreen()
-      }
-      setIsFullscreen(!isFullscreen)
-    }
-  }
-
-  const formatTime = (time: number) => {
-    const hours = Math.floor(time / 3600)
-    const minutes = Math.floor((time % 3600) / 60)
-    const seconds = Math.floor(time % 60)
-
-    if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-    }
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`
   }
 
   if (!videoUrl) {
@@ -205,107 +114,21 @@ export default function WatchMoviePage() {
             </div>
           )}
 
-          {/* Video Player Container */}
-          <div className="relative bg-black rounded-lg overflow-hidden border border-green-500/20">
-            <video
-              ref={videoRef}
-              className="w-full aspect-video"
-              onTimeUpdate={handleTimeUpdate}
-              onLoadedMetadata={handleLoadedMetadata}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
-              controls={false}
-              preload="metadata"
-            >
-              <source src={videoUrl} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-
-            {/* Custom Controls */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
-              {/* Progress Bar */}
-              <div className="mb-4">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 0}
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer slider"
-                  style={{
-                    background: `linear-gradient(to right, #10b981 0%, #10b981 ${(currentTime / duration) * 100}%, #4b5563 ${(currentTime / duration) * 100}%, #4b5563 100%)`,
-                  }}
-                />
-              </div>
-
-              {/* Control Buttons */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Button onClick={togglePlay} size="sm" className="bg-green-500 hover:bg-green-600 text-black">
-                    {isPlaying ? "Pause" : "Play"}
-                  </Button>
-
-                  <div className="flex items-center space-x-2">
-                    <Volume2 className="w-4 h-4 text-white" />
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={volume}
-                      onChange={handleVolumeChange}
-                      className="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  <span className="text-sm text-gray-300">
-                    {formatTime(currentTime)} / {formatTime(duration)}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  {movie?.video_links && (
-                    <div className="relative">
-                      <Button
-                        onClick={() => setShowQualityMenu(!showQualityMenu)}
-                        size="sm"
-                        variant="outline"
-                        className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
-                      >
-                        <Settings className="w-4 h-4 mr-2" />
-                        {currentQuality}
-                      </Button>
-
-                      {showQualityMenu && (
-                        <div className="absolute bottom-full right-0 mb-2 bg-gray-900 border border-green-500/30 rounded-lg overflow-hidden">
-                          {Object.keys(movie.video_links).map((quality) => (
-                            <button
-                              key={quality}
-                              onClick={() => switchQuality(quality)}
-                              className={`block w-full px-3 py-2 text-left hover:bg-green-500/10 ${
-                                currentQuality === quality ? "bg-green-500/20 text-green-400" : "text-white"
-                              }`}
-                            >
-                              {quality}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={toggleFullscreen}
-                    size="sm"
-                    variant="outline"
-                    className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
-                  >
-                    <Maximize className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <PlyrPlayer
+            sources={
+              movie?.video_links
+                ? [
+                    ...(movie.video_links["1080p"]
+                      ? [{ src: movie.video_links["1080p"], type: "video/mp4", size: 1080 }]
+                      : []),
+                    ...(movie.video_links["720p"]
+                      ? [{ src: movie.video_links["720p"], type: "video/mp4", size: 720 }]
+                      : []),
+                  ]
+                : [{ src: videoUrl, type: "video/mp4", size: Number.parseInt(currentQuality.replace("p", "")) }]
+            }
+            poster={movie?.poster_url}
+          />
 
           {/* Download Options */}
           <div className="mt-6 p-4 bg-gray-900/50 rounded-lg border border-green-500/20">
@@ -313,25 +136,31 @@ export default function WatchMoviePage() {
             <div className="flex flex-wrap gap-3">
               {movie?.video_links ? (
                 Object.entries(movie.video_links).map(([quality, url]) => (
-                  <Button
+                  <Link
                     key={quality}
-                    onClick={() => window.open(url, "_blank")}
-                    variant="outline"
-                    className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                    href={`/download/movie/${params.id}?url=${encodeURIComponent(url)}&quality=${quality}&title=${encodeURIComponent(movie.title)}`}
                   >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download {quality}
-                  </Button>
+                    <Button
+                      variant="outline"
+                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download {quality}
+                    </Button>
+                  </Link>
                 ))
               ) : (
-                <Button
-                  onClick={() => window.open(videoUrl, "_blank")}
-                  variant="outline"
-                  className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                <Link
+                  href={`/download/movie/${params.id}?url=${encodeURIComponent(videoUrl)}&quality=${currentQuality}&title=${encodeURIComponent(movie?.title || "Movie")}`}
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download Current Quality
-                </Button>
+                  <Button
+                    variant="outline"
+                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download Current Quality
+                  </Button>
+                </Link>
               )}
             </div>
           </div>

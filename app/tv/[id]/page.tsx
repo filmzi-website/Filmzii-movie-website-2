@@ -23,7 +23,7 @@ interface Season {
 
 interface TVSeries {
   id: number
-  type: "tv"
+  type: "tv" | "series"
   title: string
   description: string
   poster_url: string
@@ -51,16 +51,25 @@ export default function TVSeriesDetailsPage() {
 
   const fetchTVSeriesDetails = async (id: string) => {
     try {
+      console.log("[v0] Fetching TV series details for ID:", id)
       const response = await fetch(`https://movie-database-real-working-mx21.vercel.app/media/${id}`)
       const data = await response.json()
 
-      if (data.status === "success" && data.data.type === "tv") {
-        setTVSeries(data.data)
+      console.log("[v0] TV series API response:", data)
+
+      if (data.status === "success" && data.data) {
+        if (data.data.type === "tv" || data.data.type === "series" || data.data.total_seasons) {
+          setTVSeries(data.data)
+        } else {
+          console.log("[v0] Not a TV series, type:", data.data.type)
+          setError("TV Series not found")
+        }
       } else {
+        console.log("[v0] API error or no data:", data)
         setError("TV Series not found")
       }
     } catch (error) {
-      console.error("Error fetching TV series details:", error)
+      console.error("[v0] Error fetching TV series details:", error)
       setError("Failed to load TV series details")
     } finally {
       setLoading(false)
@@ -75,10 +84,6 @@ export default function TVSeriesDetailsPage() {
       newExpanded.add(seasonNumber)
     }
     setExpandedSeasons(newExpanded)
-  }
-
-  const handleDownload = (url: string, quality: string, season: number, episode: number) => {
-    window.open(url, "_blank")
   }
 
   const handleWatch = (videoUrl: string, season: number, episode: number) => {
@@ -273,40 +278,32 @@ export default function TVSeriesDetailsPage() {
                                 </Button>
                               )}
                               {episode.video_720p && (
-                                <Button
-                                  onClick={() =>
-                                    handleDownload(
-                                      episode.video_720p!,
-                                      "720p",
-                                      season.season_number,
-                                      episode.episode_number,
-                                    )
-                                  }
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                                <Link
+                                  href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_720p)}&quality=720p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
                                 >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  720p
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    720p
+                                  </Button>
+                                </Link>
                               )}
                               {episode.video_1080p && (
-                                <Button
-                                  onClick={() =>
-                                    handleDownload(
-                                      episode.video_1080p!,
-                                      "1080p",
-                                      season.season_number,
-                                      episode.episode_number,
-                                    )
-                                  }
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                                <Link
+                                  href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_1080p)}&quality=1080p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
                                 >
-                                  <Download className="w-4 h-4 mr-1" />
-                                  1080p
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                  >
+                                    <Download className="w-4 h-4 mr-1" />
+                                    1080p
+                                  </Button>
+                                </Link>
                               )}
                             </div>
                           </div>

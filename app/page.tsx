@@ -45,8 +45,15 @@ export default function HomePage() {
         )
         const tv2025 = allMedia.filter((item: Movie) => item.type === "tv" && item.release_date?.includes("2025"))
 
-        setMovies(movies2025.length > 0 ? movies2025 : allMedia.filter((item: Movie) => item.type === "movie"))
-        setTvSeries(tv2025.length > 0 ? tv2025 : allMedia.filter((item: Movie) => item.type === "tv"))
+        // Fallback to all movies/TV if no 2025 content found
+        const allMovies = allMedia.filter((item: Movie) => item.type === "movie")
+        const allTV = allMedia.filter((item: Movie) => item.type === "tv")
+
+        setMovies(movies2025.length > 0 ? movies2025 : allMovies.slice(0, 20))
+        setTvSeries(tv2025.length > 0 ? tv2025 : allTV.slice(0, 20))
+
+        console.log("[v0] Movies loaded:", movies2025.length > 0 ? movies2025.length : allMovies.length)
+        console.log("[v0] TV Series loaded:", tv2025.length > 0 ? tv2025.length : allTV.length)
       }
     } catch (error) {
       console.error("Error fetching movies:", error)

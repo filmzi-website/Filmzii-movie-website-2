@@ -56,10 +56,6 @@ export default function MovieDetailsPage() {
     }
   }
 
-  const handleDownload = (url: string, quality: string) => {
-    window.open(url, "_blank")
-  }
-
   const handleWatch = () => {
     if (movie?.video_links?.["1080p"] || movie?.video_links?.["720p"]) {
       const videoUrl = movie.video_links["1080p"] || movie.video_links["720p"]
@@ -204,24 +200,30 @@ export default function MovieDetailsPage() {
                     <h4 className="text-md font-medium text-white">Download Options:</h4>
                     <div className="flex flex-wrap gap-3">
                       {movie.video_links["720p"] && (
-                        <Button
-                          onClick={() => handleDownload(movie.video_links!["720p"], "720p")}
-                          variant="outline"
-                          className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-6 py-3"
+                        <Link
+                          href={`/download/movie/${movie.id}?url=${encodeURIComponent(movie.video_links["720p"])}&quality=720p&title=${encodeURIComponent(movie.title)}`}
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download 720p
-                        </Button>
+                          <Button
+                            variant="outline"
+                            className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent px-6 py-3"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download 720p
+                          </Button>
+                        </Link>
                       )}
                       {movie.video_links["1080p"] && (
-                        <Button
-                          onClick={() => handleDownload(movie.video_links!["1080p"], "1080p")}
-                          variant="outline"
-                          className="border-green-500/50 text-green-400 hover:bg-green-500/10 px-6 py-3"
+                        <Link
+                          href={`/download/movie/${movie.id}?url=${encodeURIComponent(movie.video_links["1080p"])}&quality=1080p&title=${encodeURIComponent(movie.title)}`}
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download 1080p
-                        </Button>
+                          <Button
+                            variant="outline"
+                            className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent px-6 py-3"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download 1080p
+                          </Button>
+                        </Link>
                       )}
                     </div>
                   </div>
