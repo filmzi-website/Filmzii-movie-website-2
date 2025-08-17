@@ -47,7 +47,7 @@ export default function HomePage() {
 
   const fetchMovies = async () => {
     try {
-      const response = await fetch("https://movie-database-real-working-mx21.vercel.app/media")
+      const response = await fetch("https://movie-database-nu-ashen.vercel.app/media")
       const data = await response.json()
       if (data.status === "success") {
         const allMedia = data.data
@@ -88,7 +88,7 @@ export default function HomePage() {
 
     try {
       const response = await fetch(
-        `https://movie-database-real-working-mx21.vercel.app/search?q=${encodeURIComponent(query)}`,
+        `https://movie-database-nu-ashen.vercel.app/search?q=${encodeURIComponent(query)}`,
       )
       const data = await response.json()
       if (data.status === "success") {
