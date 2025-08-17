@@ -27,6 +27,7 @@ export default function WatchMoviePage() {
   const [loading, setLoading] = useState(true)
   const [videoUrl, setVideoUrl] = useState<string>("")
   const [currentQuality, setCurrentQuality] = useState<string>("720p")
+  const [playerKey, setPlayerKey] = useState(0) // Key to force re-render
 
   useEffect(() => {
     const url = searchParams.get("url")
@@ -34,6 +35,7 @@ export default function WatchMoviePage() {
     if (url) {
       setVideoUrl(decodeURIComponent(url))
       setCurrentQuality(quality)
+      setPlayerKey(prev => prev + 1) // Force player re-render when URL changes
     }
 
     if (params.id) {
@@ -43,13 +45,16 @@ export default function WatchMoviePage() {
 
   const fetchMovieDetails = async (id: string) => {
     try {
+      setLoading(true)
       const response = await fetch(`https://movie-database-real-working-mx21.vercel.app/media/${id}`)
       const data = await response.json()
 
       if (data.status === "success") {
         setMovie(data.data)
         if (!videoUrl && data.data.video_links) {
-          setVideoUrl(data.data.video_links["720p"] || data.data.video_links["1080p"] || "")
+          const newUrl = data.data.video_links["720p"] || data.data.video_links["1080p"] || ""
+          setVideoUrl(newUrl)
+          setPlayerKey(prev => prev + 1) // Force re-render when new URL is set
         }
       }
     } catch (error) {
@@ -57,6 +62,18 @@ export default function WatchMoviePage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <div className="w-32 h-8 bg-gray-800 rounded mb-4 mx-auto"></div>
+          <div className="w-64 h-4 bg-gray-800 rounded mb-6 mx-auto"></div>
+          <div className="w-48 h-12 bg-green-500/30 rounded mx-auto"></div>
+        </div>
+      </div>
+    )
   }
 
   if (!videoUrl) {
@@ -76,14 +93,36 @@ export default function WatchMoviePage() {
     )
   }
 
+  // Prepare sources for Player component
+  const getPlayerSources = () => {
+    if (movie?.video_links) {
+      return [
+        ...(movie.video_links["1080p"]
+          ? [{ src: movie.video_links["1080p"], type: "video/mp4", size: 1080 }]
+          : []),
+        ...(movie.video_links["720p"]
+          ? [{ src: movie.video_links["720p"], type: "video/mp4", size: 720 }]
+          : []),
+      ]
+    }
+    return [{ src: videoUrl, type: "video/mp4", size: Number.parseInt(currentQuality.replace("p", "")) }]
+  }
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="border-b border-green-500/20 bg-black/90 backdrop-blur-sm">
+      <header className="border-b border-green-500/20 bg-black/90 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-3">
-              <Image src="https://envs.sh/uiU.jpg" alt="Filmzi Logo" width={32} height={32} className="rounded-lg" />
+              <Image 
+                src="https://envs.sh/uiU.jpg" 
+                alt="Filmzi Logo" 
+                width={32} 
+                height={32} 
+                className="rounded-lg"
+                priority
+              />
               <h1 className="text-xl font-bold text-green-400">Filmzi</h1>
             </Link>
             <div className="flex items-center space-x-4">
@@ -114,56 +153,50 @@ export default function WatchMoviePage() {
             </div>
           )}
 
-          <Player
-            sources={
-              movie?.video_links
-                ? [
-                    ...(movie.video_links["1080p"]
-                      ? [{ src: movie.video_links["1080p"], type: "video/mp4", size: 1080 }]
-                      : []),
-                    ...(movie.video_links["720p"]
-                      ? [{ src: movie.video_links["720p"], type: "video/mp4", size: 720 }]
-                      : []),
-                  ]
-                : [{ src: videoUrl, type: "video/mp4", size: Number.parseInt(currentQuality.replace("p", "")) }]
-            }
-            poster={movie?.poster_url}
-          />
+          {/* Player with key to force re-render */}
+          <div key={playerKey} className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <Player
+              sources={getPlayerSources()}
+              poster={movie?.poster_url}
+            />
+          </div>
 
           {/* Download Options */}
-          <div className="mt-6 p-4 bg-gray-900/50 rounded-lg border border-green-500/20">
-            <h3 className="text-lg font-semibold text-green-400 mb-3">Download Options</h3>
-            <div className="flex flex-wrap gap-3">
-              {movie?.video_links ? (
-                Object.entries(movie.video_links).map(([quality, url]) => (
+          {movie && (
+            <div className="mt-6 p-4 bg-gray-900/50 rounded-lg border border-green-500/20">
+              <h3 className="text-lg font-semibold text-green-400 mb-3">Download Options</h3>
+              <div className="flex flex-wrap gap-3">
+                {movie.video_links ? (
+                  Object.entries(movie.video_links).map(([quality, url]) => (
+                    <Link
+                      key={quality}
+                      href={`/download/movie/${params.id}?url=${encodeURIComponent(url)}&quality=${quality}&title=${encodeURIComponent(movie.title)}`}
+                    >
+                      <Button
+                        variant="outline"
+                        className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download {quality}
+                      </Button>
+                    </Link>
+                  ))
+                ) : (
                   <Link
-                    key={quality}
-                    href={`/download/movie/${params.id}?url=${encodeURIComponent(url)}&quality=${quality}&title=${encodeURIComponent(movie.title)}`}
+                    href={`/download/movie/${params.id}?url=${encodeURIComponent(videoUrl)}&quality=${currentQuality}&title=${encodeURIComponent(movie.title)}`}
                   >
                     <Button
                       variant="outline"
                       className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Download {quality}
+                      Download Current Quality
                     </Button>
                   </Link>
-                ))
-              ) : (
-                <Link
-                  href={`/download/movie/${params.id}?url=${encodeURIComponent(videoUrl)}&quality=${currentQuality}&title=${encodeURIComponent(movie?.title || "Movie")}`}
-                >
-                  <Button
-                    variant="outline"
-                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Current Quality
-                  </Button>
-                </Link>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
 
