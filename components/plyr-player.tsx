@@ -1,12 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 
 const Player = ({ sources = [], poster = null }) => {
   const videoRef = useRef(null)
   const playerRef = useRef(null)
-  const [isPlyrLoaded, setIsPlyrLoaded] = useState(false)
-  const [plyrError, setPlyrError] = useState(false)
 
   // Default sources if none provided (for demo)
   const defaultSources = [
@@ -21,14 +19,11 @@ const Player = ({ sources = [], poster = null }) => {
 
   useEffect(() => {
     const initializePlyr = async () => {
-      try {
-        if (!videoRef.current) return
+      if (!videoRef.current) return
 
-        // Dynamically import Plyr and CSS
+      try {
         const Plyr = (await import("plyr")).default
         await import("plyr/dist/plyr.css")
-
-        console.log("[v0] Initializing Plyr player")
 
         // Initialize Plyr player
         playerRef.current = new Plyr(videoRef.current, {
@@ -62,20 +57,12 @@ const Player = ({ sources = [], poster = null }) => {
         })
 
         playerRef.current.on("ready", () => {
-          console.log("[v0] Plyr player ready")
-          setIsPlyrLoaded(true)
           playerRef.current.play().catch((e) => {
             console.log("Auto-play prevented:", e)
           })
         })
-
-        playerRef.current.on("error", (event) => {
-          console.error("[v0] Plyr error:", event)
-          setPlyrError(true)
-        })
       } catch (error) {
-        console.error("[v0] Failed to load Plyr:", error)
-        setPlyrError(true)
+        console.error("Failed to initialize Plyr:", error)
       }
     }
 
@@ -89,38 +76,13 @@ const Player = ({ sources = [], poster = null }) => {
     }
   }, [videoSources])
 
-  if (!isPlyrLoaded && !plyrError) {
-    return (
-      <div className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl">
-        <video ref={videoRef} poster={poster} controls playsInline className="w-full">
-          {videoSources.map((source, index) => (
-            <source key={index} src={source.src} type={source.type} />
-          ))}
-          Your browser doesn't support HTML5 video.
-        </video>
-      </div>
-    )
-  }
-
-  if (plyrError) {
-    return (
-      <div className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl">
-        <video ref={videoRef} poster={poster} controls playsInline className="w-full">
-          {videoSources.map((source, index) => (
-            <source key={index} src={source.src} type={source.type} />
-          ))}
-          Your browser doesn't support HTML5 video.
-        </video>
-      </div>
-    )
-  }
-
   return (
     <div className="w-full max-w-4xl mx-auto bg-gray-800 rounded-xl overflow-hidden shadow-xl">
       <video ref={videoRef} poster={poster} controls playsInline className="w-full">
         {videoSources.map((source, index) => (
           <source key={index} src={source.src} type={source.type} size={source.size} />
         ))}
+        {/* Fallback text */}
         <track kind="captions" label="English" srcLang="en" default />
         Your browser doesn't support HTML5 video.
       </video>

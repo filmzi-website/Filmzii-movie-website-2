@@ -1,5 +1,5 @@
 "use client"
-import PlyrPlayer from "@/components/plyr-player"
+import Player from "@/components/plyr-player"
 import { useState, useEffect } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -114,7 +114,7 @@ export default function WatchMoviePage() {
             </div>
           )}
 
-          <PlyrPlayer
+          <Player
             sources={
               movie?.video_links
                 ? [

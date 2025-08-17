@@ -23,7 +23,7 @@ interface Season {
 
 interface TVSeries {
   id: number
-  type: "tv" | "series"
+  type: string
   title: string
   description: string
   poster_url: string
@@ -60,8 +60,21 @@ export default function TVSeriesDetailsPage() {
       console.log("[v0] Response data:", data.data)
 
       if (data.status === "success" && data.data) {
-        console.log("[v0] TV series data found, setting as valid")
-        setTVSeries(data.data)
+        console.log("[v0] Data found, checking if it has TV series characteristics")
+        const mediaData = data.data
+
+        // Check if it has TV series characteristics (seasons, episodes, or type)
+        const hasSeasons = mediaData.seasons && Object.keys(mediaData.seasons).length > 0
+        const hasTotalSeasons = mediaData.total_seasons && mediaData.total_seasons > 0
+        const isTypeTV = mediaData.type === "tv" || mediaData.type === "series"
+
+        if (hasSeasons || hasTotalSeasons || isTypeTV) {
+          console.log("[v0] TV series data confirmed, setting as valid")
+          setTVSeries(mediaData)
+        } else {
+          console.log("[v0] Data exists but doesn't appear to be TV series:", mediaData)
+          setError("This content is not a TV series")
+        }
       } else {
         console.log("[v0] API error or no data:", data)
         setError("TV Series not found")
@@ -157,8 +170,8 @@ export default function TVSeriesDetailsPage() {
             <Card className="bg-gray-900 border-green-500/20 overflow-hidden">
               <CardContent className="p-0">
                 <Image
-                  src={tvSeries.poster_url || "/placeholder.svg"}
-                  alt={tvSeries.title}
+                  src={tvSeries?.poster_url || "/placeholder.svg"}
+                  alt={tvSeries?.title || "TV Series"}
                   width={400}
                   height={600}
                   className="w-full aspect-[2/3] object-cover"
@@ -173,22 +186,23 @@ export default function TVSeriesDetailsPage() {
               {/* Title and Type */}
               <div>
                 <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-4xl font-bold text-white">{tvSeries.title}</h1>
+                  <h1 className="text-4xl font-bold text-white">{tvSeries?.title}</h1>
                   <Badge className="bg-purple-500 hover:bg-purple-600">TV Series</Badge>
                 </div>
                 <div className="flex items-center gap-4 text-gray-400">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    <span>{new Date(tvSeries.release_date).getFullYear()}</span>
+                    <span>{tvSeries?.release_date ? new Date(tvSeries.release_date).getFullYear() : "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Globe className="w-4 h-4" />
-                    <span>{tvSeries.language}</span>
+                    <span>{tvSeries?.language || "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4" />
                     <span>
-                      {tvSeries.total_seasons} Season{tvSeries.total_seasons > 1 ? "s" : ""}
+                      {tvSeries?.total_seasons || Object.keys(tvSeries?.seasons || {}).length} Season
+                      {(tvSeries?.total_seasons || Object.keys(tvSeries?.seasons || {}).length) > 1 ? "s" : ""}
                     </span>
                   </div>
                 </div>
@@ -197,7 +211,7 @@ export default function TVSeriesDetailsPage() {
               {/* Description */}
               <div>
                 <h2 className="text-xl font-semibold text-green-400 mb-3">Overview</h2>
-                <p className="text-gray-300 leading-relaxed">{tvSeries.description}</p>
+                <p className="text-gray-300 leading-relaxed">{tvSeries?.description || "No description available."}</p>
               </div>
 
               {/* Additional Info */}
@@ -206,19 +220,25 @@ export default function TVSeriesDetailsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <span className="text-gray-400">Release Date:</span>
-                    <span className="text-white ml-2">{new Date(tvSeries.release_date).toLocaleDateString()}</span>
+                    <span className="text-white ml-2">
+                      {tvSeries?.release_date ? new Date(tvSeries.release_date).toLocaleDateString() : "N/A"}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400">Language:</span>
-                    <span className="text-white ml-2">{tvSeries.language}</span>
+                    <span className="text-white ml-2">{tvSeries?.language || "N/A"}</span>
                   </div>
                   <div>
                     <span className="text-gray-400">Total Seasons:</span>
-                    <span className="text-white ml-2">{tvSeries.total_seasons}</span>
+                    <span className="text-white ml-2">
+                      {tvSeries?.total_seasons || Object.keys(tvSeries?.seasons || {}).length}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-400">Added:</span>
-                    <span className="text-white ml-2">{new Date(tvSeries.created_at).toLocaleDateString()}</span>
+                    <span className="text-white ml-2">
+                      {tvSeries?.created_at ? new Date(tvSeries.created_at).toLocaleDateString() : "N/A"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -227,93 +247,95 @@ export default function TVSeriesDetailsPage() {
         </div>
 
         {/* Episodes Section */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold text-green-400 mb-6">Episodes</h2>
-          <div className="space-y-4">
-            {Object.entries(tvSeries.seasons).map(([seasonKey, season]) => (
-              <Card key={seasonKey} className="bg-gray-900 border-green-500/20">
-                <CardContent className="p-0">
-                  <button
-                    onClick={() => toggleSeason(season.season_number)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold text-white">Season {season.season_number}</h3>
-                      <Badge variant="outline" className="border-green-500/30 text-green-400">
-                        {season.total_episodes} Episodes
-                      </Badge>
-                    </div>
-                    {expandedSeasons.has(season.season_number) ? (
-                      <ChevronUp className="w-5 h-5 text-green-400" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-green-400" />
-                    )}
-                  </button>
+        {tvSeries?.seasons && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold text-green-400 mb-6">Episodes</h2>
+            <div className="space-y-4">
+              {Object.entries(tvSeries.seasons).map(([seasonKey, season]) => (
+                <Card key={seasonKey} className="bg-gray-900 border-green-500/20">
+                  <CardContent className="p-0">
+                    <button
+                      onClick={() => toggleSeason(season.season_number)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-gray-800/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-white">Season {season.season_number}</h3>
+                        <Badge variant="outline" className="border-green-500/30 text-green-400">
+                          {season.total_episodes} Episodes
+                        </Badge>
+                      </div>
+                      {expandedSeasons.has(season.season_number) ? (
+                        <ChevronUp className="w-5 h-5 text-green-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-green-400" />
+                      )}
+                    </button>
 
-                  {expandedSeasons.has(season.season_number) && (
-                    <div className="border-t border-green-500/20">
-                      {season.episodes.map((episode) => (
-                        <div key={episode.episode_number} className="p-4 border-b border-gray-800 last:border-b-0">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h4 className="font-medium text-white mb-1">Episode {episode.episode_number}</h4>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {(episode.video_720p || episode.video_1080p) && (
-                                <Button
-                                  onClick={() =>
-                                    handleWatch(
-                                      episode.video_1080p || episode.video_720p!,
-                                      season.season_number,
-                                      episode.episode_number,
-                                    )
-                                  }
-                                  size="sm"
-                                  className="bg-green-500 hover:bg-green-600 text-black"
-                                >
-                                  <Play className="w-4 h-4 mr-1" />
-                                  Watch
-                                </Button>
-                              )}
-                              {episode.video_720p && (
-                                <Link
-                                  href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_720p)}&quality=720p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
-                                >
+                    {expandedSeasons.has(season.season_number) && (
+                      <div className="border-t border-green-500/20">
+                        {season.episodes.map((episode) => (
+                          <div key={episode.episode_number} className="p-4 border-b border-gray-800 last:border-b-0">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium text-white mb-1">Episode {episode.episode_number}</h4>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {(episode.video_720p || episode.video_1080p) && (
                                   <Button
+                                    onClick={() =>
+                                      handleWatch(
+                                        episode.video_1080p || episode.video_720p!,
+                                        season.season_number,
+                                        episode.episode_number,
+                                      )
+                                    }
                                     size="sm"
-                                    variant="outline"
-                                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                    className="bg-green-500 hover:bg-green-600 text-black"
                                   >
-                                    <Download className="w-4 h-4 mr-1" />
-                                    720p
+                                    <Play className="w-4 h-4 mr-1" />
+                                    Watch
                                   </Button>
-                                </Link>
-                              )}
-                              {episode.video_1080p && (
-                                <Link
-                                  href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_1080p)}&quality=1080p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
-                                >
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                )}
+                                {episode.video_720p && (
+                                  <Link
+                                    href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_720p)}&quality=720p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
                                   >
-                                    <Download className="w-4 h-4 mr-1" />
-                                    1080p
-                                  </Button>
-                                </Link>
-                              )}
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                    >
+                                      <Download className="w-4 h-4 mr-1" />
+                                      720p
+                                    </Button>
+                                  </Link>
+                                )}
+                                {episode.video_1080p && (
+                                  <Link
+                                    href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_1080p)}&quality=1080p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
+                                  >
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                    >
+                                      <Download className="w-4 h-4 mr-1" />
+                                      1080p
+                                    </Button>
+                                  </Link>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       {/* Footer */}

@@ -1,6 +1,6 @@
 "use client"
 
-import PlyrPlayer from "@/components/plyr-player"
+import Player from "@/components/plyr-player"
 import { useState, useEffect } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -119,7 +119,7 @@ export default function WatchTVSeriesPage() {
             </div>
           )}
 
-          <PlyrPlayer
+          <Player
             sources={[
               { src: videoUrl, type: "video/mp4", size: 1080 },
               { src: videoUrl.replace("1080p", "720p"), type: "video/mp4", size: 720 },
