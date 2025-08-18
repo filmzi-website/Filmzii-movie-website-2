@@ -51,27 +51,45 @@ export default function HomePage() {
       const data = await response.json()
       if (data.status === "success") {
         const allMedia = data.data
+        const currentYear = new Date().getFullYear().toString()
 
+        // Extract movies and sort by release date
         const allMovies = allMedia.filter((item: Movie) => item.type === "movie")
         const sortedMovies = allMovies.sort(
           (a: Movie, b: Movie) =>
             new Date(b.release_date || "1900-01-01").getTime() - new Date(a.release_date || "1900-01-01").getTime(),
         )
-        setHeroMovies(sortedMovies.slice(0, 7))
 
+        // Prioritize 2025 movies for hero section
+        const currentYearMovies = sortedMovies.filter(movie => 
+          movie.release_date?.startsWith(currentYear)
+        const otherMovies = sortedMovies.filter(movie => 
+          !movie.release_date?.startsWith(currentYear))
+        
+        // Combine current year movies + others (max 7)
+        const heroCandidates = [
+          ...currentYearMovies,
+          ...otherMovies
+        ].slice(0, 7)
+        
+        setHeroMovies(heroCandidates)
+
+        // Get 2025 movies for main row
         const movies2025 = allMedia.filter(
-          (item: Movie) => item.type === "movie" && item.release_date?.includes("2025"),
+          (item: Movie) => item.type === "movie" && item.release_date?.startsWith(currentYear),
         )
-        const tv2025 = allMedia.filter((item: Movie) => item.type === "tv" && item.release_date?.includes("2025"))
+        const tv2025 = allMedia.filter(
+          (item: Movie) => item.type === "tv" && item.release_date?.startsWith(currentYear)
+        )
 
+        // Fallback to latest movies if no 2025 content
         const allTV = allMedia.filter((item: Movie) => item.type === "tv")
-
-        setMovies(movies2025.length > 0 ? movies2025 : allMovies.slice(0, 20))
+        
+        setMovies(movies2025.length > 0 ? movies2025 : sortedMovies.slice(0, 20))
         setTvSeries(tv2025.length > 0 ? tv2025 : allTV.slice(0, 20))
 
-        console.log("[v0] Movies loaded:", movies2025.length > 0 ? movies2025.length : allMovies.length)
-        console.log("[v0] TV Series loaded:", tv2025.length > 0 ? tv2025.length : allTV.length)
-        console.log("[v0] Hero movies loaded:", sortedMovies.slice(0, 7).length)
+        console.log(`Latest Movies (${currentYear}):`, movies2025.length)
+        console.log("Hero movies:", heroCandidates.length)
       }
     } catch (error) {
       console.error("Error fetching movies:", error)
@@ -467,8 +485,8 @@ export default function HomePage() {
         </section>
       ) : (
         <>
-          <MovieRow title="Latest Movies 2025" items={movies} loading={loading} />
-          <MovieRow title="Latest TV Series 2025" items={tvSeries} loading={loading} />
+          <MovieRow title={`Latest Movies ${new Date().getFullYear()}`} items={movies} loading={loading} />
+          <MovieRow title={`Latest TV Series ${new Date().getFullYear()}`} items={tvSeries} loading={loading} />
         </>
       )}
 
