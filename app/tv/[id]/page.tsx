@@ -126,8 +126,11 @@ export default function TVSeriesDetailsPage() {
     )
   }
 
-  // Calculate actual seasons count from seasons object
-  const actualSeasonsCount = Object.keys(tvSeries?.seasons || {}).length;
+  // FIX: Calculate max season number from season objects
+  const seasonNumbers = tvSeries?.seasons 
+    ? Object.values(tvSeries.seasons).map(season => season.season_number)
+    : [];
+  const maxSeasonNumber = seasonNumbers.length > 0 ? Math.max(...seasonNumbers) : 0;
 
   return (
     <div className="min-h-screen bg-black text-white">
@@ -191,8 +194,8 @@ export default function TVSeriesDetailsPage() {
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4" />
                     <span>
-                      {actualSeasonsCount} Season
-                      {actualSeasonsCount > 1 ? "s" : ""}
+                      {maxSeasonNumber} Season
+                      {maxSeasonNumber > 1 ? "s" : ""}
                     </span>
                   </div>
                 </div>
@@ -221,7 +224,7 @@ export default function TVSeriesDetailsPage() {
                   <div>
                     <span className="text-gray-400">Total Seasons:</span>
                     <span className="text-white ml-2">
-                      {actualSeasonsCount}
+                      {maxSeasonNumber}
                     </span>
                   </div>
                   <div>
