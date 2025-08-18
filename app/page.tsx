@@ -60,11 +60,13 @@ export default function HomePage() {
             new Date(b.release_date || "1900-01-01").getTime() - new Date(a.release_date || "1900-01-01").getTime(),
         )
 
-        // Prioritize 2025 movies for hero section
+        // Prioritize current year movies for hero section
         const currentYearMovies = sortedMovies.filter(movie => 
           movie.release_date?.startsWith(currentYear)
+        );
         const otherMovies = sortedMovies.filter(movie => 
-          !movie.release_date?.startsWith(currentYear))
+          !movie.release_date?.startsWith(currentYear)
+        );
         
         // Combine current year movies + others (max 7)
         const heroCandidates = [
@@ -74,21 +76,21 @@ export default function HomePage() {
         
         setHeroMovies(heroCandidates)
 
-        // Get 2025 movies for main row
-        const movies2025 = allMedia.filter(
-          (item: Movie) => item.type === "movie" && item.release_date?.startsWith(currentYear),
-        )
-        const tv2025 = allMedia.filter(
+        // Get current year movies for main row
+        const moviesCurrentYear = allMedia.filter(
+          (item: Movie) => item.type === "movie" && item.release_date?.startsWith(currentYear)
+        );
+        const tvCurrentYear = allMedia.filter(
           (item: Movie) => item.type === "tv" && item.release_date?.startsWith(currentYear)
-        )
+        );
 
-        // Fallback to latest movies if no 2025 content
+        // Fallback to latest movies if no current year content
         const allTV = allMedia.filter((item: Movie) => item.type === "tv")
         
-        setMovies(movies2025.length > 0 ? movies2025 : sortedMovies.slice(0, 20))
-        setTvSeries(tv2025.length > 0 ? tv2025 : allTV.slice(0, 20))
+        setMovies(moviesCurrentYear.length > 0 ? moviesCurrentYear : sortedMovies.slice(0, 20))
+        setTvSeries(tvCurrentYear.length > 0 ? tvCurrentYear : allTV.slice(0, 20))
 
-        console.log(`Latest Movies (${currentYear}):`, movies2025.length)
+        console.log(`Latest Movies (${currentYear}):`, moviesCurrentYear.length)
         console.log("Hero movies:", heroCandidates.length)
       }
     } catch (error) {
