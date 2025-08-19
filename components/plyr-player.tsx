@@ -102,7 +102,7 @@ const PlyrPlayer = ({ sources = [], poster = null }: PlayerProps) => {
         poster={poster || undefined}
         playsInline
         controls={false}
-        className={`w-full h-full ${isReady ? 'block' : 'hidden'}`}
+        className="w-full h-full"
       >
         {videoSources.map((source, index) => (
           <source
@@ -114,8 +114,8 @@ const PlyrPlayer = ({ sources = [], poster = null }: PlayerProps) => {
         ))}
       </video>
 
-      {/* Poster with Play Button */}
-      {(!isReady || !isPlaying) && poster && (
+      {/* Poster with Play Button - Only shown before playback starts */}
+      {!isPlaying && poster && (
         <div 
           className="absolute inset-0 flex items-center justify-center cursor-pointer"
           onClick={handlePlayClick}
