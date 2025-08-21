@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Download, Play, MessageCircle, Send, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Download, Play, MessageCircle, Send } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -51,46 +51,36 @@ export default function HomePage() {
       const data = await response.json()
       if (data.status === "success") {
         const allMedia = data.data
-        const currentYear = new Date().getFullYear().toString()
 
-        // Extract movies and sort by release date
-        const allMovies = allMedia.filter((item: Movie) => item.type === "movie")
-        const sortedMovies = allMovies.sort(
-          (a: Movie, b: Movie) =>
-            new Date(b.release_date || "1900-01-01").getTime() - new Date(a.release_date || "1900-01-01").getTime(),
-        )
+        // Sort all media by ID (latest added first - assuming higher ID = newer)
+        const sortedByLatest = allMedia.sort((a: Movie, b: Movie) => b.id - a.id)
 
-        // Prioritize current year movies for hero section
-        const currentYearMovies = sortedMovies.filter(movie => 
-          movie.release_date?.startsWith(currentYear)
-        );
-        const otherMovies = sortedMovies.filter(movie => 
-          !movie.release_date?.startsWith(currentYear)
+        // Extract movies and TV series from sorted data
+        const allMovies = sortedByLatest.filter((item: Movie) => item.type === "movie")
+        const allTV = sortedByLatest.filter((item: Movie) => item.type === "tv")
+
+        // Filter 2025 movies for hero section (from latest added)
+        const movies2025 = allMovies.filter(movie => 
+          movie.release_date?.startsWith("2025")
         );
         
-        // Combine current year movies + others (max 7)
-        const heroCandidates = [
-          ...currentYearMovies,
-          ...otherMovies
-        ].slice(0, 7)
-        
+        // Use 2025 movies for hero, fallback to latest movies if no 2025 content
+        const heroCandidates = movies2025.length > 0 ? movies2025.slice(0, 7) : allMovies.slice(0, 7)
         setHeroMovies(heroCandidates)
 
-        // Get current year movies for main row
-        const moviesCurrentYear = allMedia.filter(
-          (item: Movie) => item.type === "movie" && item.release_date?.startsWith(currentYear)
+        // Get 2025 content for main sections (latest added first)
+        const movies2025Latest = allMovies.filter(
+          (item: Movie) => item.release_date?.startsWith("2025")
         );
-        const tvCurrentYear = allMedia.filter(
-          (item: Movie) => item.type === "tv" && item.release_date?.startsWith(currentYear)
+        const tv2025Latest = allTV.filter(
+          (item: Movie) => item.release_date?.startsWith("2025")
         );
 
-        // Fallback to latest movies if no current year content
-        const allTV = allMedia.filter((item: Movie) => item.type === "tv")
-        
-        setMovies(moviesCurrentYear.length > 0 ? moviesCurrentYear : sortedMovies.slice(0, 20))
-        setTvSeries(tvCurrentYear.length > 0 ? tvCurrentYear : allTV.slice(0, 20))
+        // Use 2025 content if available, otherwise show latest added content
+        setMovies(movies2025Latest.length > 0 ? movies2025Latest : allMovies.slice(0, 50))
+        setTvSeries(tv2025Latest.length > 0 ? tv2025Latest : allTV.slice(0, 50))
 
-        console.log(`Latest Movies (${currentYear}):`, moviesCurrentYear.length)
+        console.log(`Latest Movies (2025):`, movies2025Latest.length)
         console.log("Hero movies:", heroCandidates.length)
       }
     } catch (error) {
@@ -119,50 +109,18 @@ export default function HomePage() {
     }
   }
 
-  const MovieRow = ({ title, items, loading }: { title: string; items: Movie[]; loading: boolean }) => {
-    const scrollRef = useRef<HTMLDivElement>(null)
-
-    const scrollLeft = () => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollBy({ left: -300, behavior: "smooth" })
-      }
-    }
-
-    const scrollRight = () => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollBy({ left: 300, behavior: "smooth" })
-      }
-    }
-
+  const MovieGrid = ({ title, items, loading }: { title: string; items: Movie[]; loading: boolean }) => {
     return (
       <section className="py-6">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl md:text-3xl font-bold text-green-400">{title}</h3>
-            <div className="hidden md:flex space-x-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={scrollLeft}
-                className="h-10 w-10 border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={scrollRight}
-                className="h-10 w-10 border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
-            </div>
           </div>
 
           {loading ? (
-            <div className="flex space-x-4 overflow-x-auto pb-4">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="flex-none w-40 md:w-48 animate-pulse">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
+              {[...Array(12)].map((_, i) => (
+                <div key={i} className="animate-pulse">
                   <div className="bg-gray-800 aspect-[2/3] rounded-lg mb-3"></div>
                   <div className="bg-gray-800 h-4 rounded mb-2"></div>
                   <div className="bg-gray-800 h-3 rounded w-3/4"></div>
@@ -170,10 +128,10 @@ export default function HomePage() {
               ))}
             </div>
           ) : (
-            <div ref={scrollRef} className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
               {items.map((movie) => (
-                <Link key={movie.id} href={`/${movie.type}/${movie.id}`} className="flex-none">
-                  <Card className="w-40 md:w-48 bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group cursor-pointer">
+                <Link key={movie.id} href={`/${movie.type}/${movie.id}`} className="block">
+                  <Card className="bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group cursor-pointer">
                     <CardContent className="p-0">
                       <div className="relative overflow-hidden rounded-t-lg">
                         <Image
@@ -188,7 +146,7 @@ export default function HomePage() {
                             <Button
                               size="sm"
                               className="bg-green-500 hover:bg-green-600 text-black w-full"
-                              onClick={(e) => e.preventDefault()} // Prevent double navigation
+                              onClick={(e) => e.preventDefault()}
                             >
                               <Play className="w-4 h-4 mr-1" />
                               Watch
@@ -201,7 +159,6 @@ export default function HomePage() {
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
-                                  // Handle download logic here
                                 }}
                               >
                                 <Download className="w-4 h-4 mr-1" />
@@ -487,8 +444,8 @@ export default function HomePage() {
         </section>
       ) : (
         <>
-          <MovieRow title={`Latest Movies ${new Date().getFullYear()}`} items={movies} loading={loading} />
-          <MovieRow title={`Latest TV Series ${new Date().getFullYear()}`} items={tvSeries} loading={loading} />
+          <MovieGrid title="Latest Movies 2025" items={movies} loading={loading} />
+          <MovieGrid title="Latest TV Series 2025" items={tvSeries} loading={loading} />
         </>
       )}
 
