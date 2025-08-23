@@ -45,7 +45,13 @@ export default function DownloadPage() {
 
   const handleDownload = () => {
     if (canDownload && verified && downloadUrl) {
-      window.open(downloadUrl, "_blank")
+      // Create a temporary anchor element for download
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = title || 'download'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
     }
   }
 
