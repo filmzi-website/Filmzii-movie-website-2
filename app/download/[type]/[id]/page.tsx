@@ -4,35 +4,19 @@ import { useState, useEffect } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, ArrowLeft, Clock, Shield, Check } from "lucide-react"
+import { Download, ArrowLeft, Clock, Shield } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
 export default function DownloadPage() {
   const params = useParams()
   const searchParams = useSearchParams()
-  const [countdown, setCountdown] = useState(5)
+  const [countdown, setCountdown] = useState(5) // Changed from 20 to 5 seconds as requested
   const [canDownload, setCanDownload] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState("")
   const [quality, setQuality] = useState("")
   const [title, setTitle] = useState("")
   const [verified, setVerified] = useState(false)
-
-  // Load Google reCAPTCHA script
-  useEffect(() => {
-    const script = document.createElement('script')
-    script.src = 'https://www.google.com/recaptcha/api.js'
-    script.async = true
-    script.defer = true
-    document.head.appendChild(script)
-
-    // Make reCAPTCHA callback available globally
-    window.onRecaptchaSuccess = () => { setVerified(true) }
-    
-    return () => {
-      document.head.removeChild(script)
-    }
-  }, [])
 
   useEffect(() => {
     const url = searchParams.get("url")
@@ -55,8 +39,13 @@ export default function DownloadPage() {
     }
   }, [countdown])
 
+  const handleVerification = () => {
+    setVerified(true)
+  }
+
   const handleDownload = () => {
     if (canDownload && verified && downloadUrl) {
+      // Create a temporary anchor element for download
       const link = document.createElement('a')
       link.href = downloadUrl
       link.download = title || 'download'
@@ -67,20 +56,25 @@ export default function DownloadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-black text-white">
       {/* Header */}
-      <header className="border-b border-green-500/20">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src="/logo.png" alt="Filmzi" width={32} height={32} />
-            <span className="text-xl font-bold text-green-400">Filmzi</span>
-          </Link>
-          <Link href="/">
-            <Button variant="outline" className="border-green-500/20 text-green-400">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
+      <header className="border-b border-green-500/20 bg-black/90 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-3">
+              <Image src="https://envs.sh/uiU.jpg" alt="Filmzi Logo" width={32} height={32} className="rounded-lg" />
+              <h1 className="text-xl font-bold text-green-400">Filmzi</h1>
+            </Link>
+            <Link href="/">
+              <Button
+                variant="outline"
+                className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -125,14 +119,11 @@ export default function DownloadPage() {
                     <Shield className="w-6 h-6 text-green-400 mr-2" />
                     <span className="text-lg font-semibold text-green-400">Verification Required</span>
                   </div>
-                  <p className="text-gray-400 mb-4">Complete reCAPTCHA verification to continue</p>
-                  <div className="mb-4 flex justify-center">
-                    <div
-                      className="g-recaptcha"
-                      data-sitekey="6LfVULArAAAAAOKzlGnIhIc2Fjt97Em3FUtDvGcX"
-                      data-callback="onRecaptchaSuccess"
-                    ></div>
-                  </div>
+                  <p className="text-gray-400 mb-4">Click the button below to verify you're human</p>
+                  <Button onClick={handleVerification} className="bg-blue-500 hover:bg-blue-600 text-white mb-4">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Verify Human
+                  </Button>
                 </div>
               ) : (
                 <div className="mb-6">
@@ -182,7 +173,8 @@ export default function DownloadPage() {
         <div className="container mx-auto px-4 text-center">
           <p className="text-gray-400 text-sm mb-2">© 2025 Filmzi. All rights reserved.</p>
           <p className="text-gray-500 text-xs max-w-2xl mx-auto">
-            Our website does not host any movie links or movies on our servers. Everything is from third party sources. We are not responsible for any content.
+            Our website does not host any movie links or movies on our servers. Everything is from third party sources.
+            We are not responsible for any content.
           </p>
         </div>
       </footer>
