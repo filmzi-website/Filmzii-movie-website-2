@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, ArrowLeft, Clock, Shield } from "lucide-react"
+import { Download, ArrowLeft, Clock, Shield, Check } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -17,6 +17,25 @@ export default function DownloadPage() {
   const [quality, setQuality] = useState("")
   const [title, setTitle] = useState("")
   const [verified, setVerified] = useState(false)
+  const [showRecaptcha, setShowRecaptcha] = useState(false)
+
+  // Load Google reCAPTCHA script
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://www.google.com/recaptcha/api.js'
+    script.async = true
+    script.defer = true
+    document.head.appendChild(script)
+
+    // Make reCAPTCHA callback available globally
+    window.onRecaptchaSuccess = () => {
+      setVerified(true)
+    }
+
+    return () => {
+      document.head.removeChild(script)
+    }
+  }, [])
 
   useEffect(() => {
     const url = searchParams.get("url")
@@ -40,7 +59,7 @@ export default function DownloadPage() {
   }, [countdown])
 
   const handleVerification = () => {
-    setVerified(true)
+    setShowRecaptcha(true)
   }
 
   const handleDownload = () => {
@@ -119,11 +138,23 @@ export default function DownloadPage() {
                     <Shield className="w-6 h-6 text-green-400 mr-2" />
                     <span className="text-lg font-semibold text-green-400">Verification Required</span>
                   </div>
-                  <p className="text-gray-400 mb-4">Click the button below to verify you're human</p>
-                  <Button onClick={handleVerification} className="bg-blue-500 hover:bg-blue-600 text-white mb-4">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Verify Human
-                  </Button>
+                  <p className="text-gray-400 mb-4">Complete reCAPTCHA verification to continue</p>
+                  
+                  {!showRecaptcha ? (
+                    <Button onClick={handleVerification} className="bg-blue-500 hover:bg-blue-600 text-white mb-4">
+                      <Shield className="w-4 h-4 mr-2" />
+                      Start Verification
+                    </Button>
+                  ) : (
+                    <div className="mb-4 flex justify-center">
+                      {/* Real Google reCAPTCHA */}
+                      <div 
+                        className="g-recaptcha" 
+                        data-sitekey="6LfVULArAAAAAOKzlGnIhIc2Fjt97Em3FUtDvGcX"
+                        data-callback="onRecaptchaSuccess"
+                      ></div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mb-6">
