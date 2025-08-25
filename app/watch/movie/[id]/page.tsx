@@ -31,29 +31,37 @@ export default function WatchMoviePage() {
   const [showPlayer, setShowPlayer] = useState(false) // New state to control player visibility
 
   useEffect(() => {
-    const url = searchParams.get("url")
-    const quality = searchParams.get("quality") || "720p"
-    if (url) {
-      setVideoUrl(decodeURIComponent(url))
-      setCurrentQuality(quality)
-      setPlayerKey(prev => prev + 1)
+    const fetchData = async () => {
+      const url = searchParams.get("url")
+      const quality = searchParams.get("quality") || "720p"
+      if (url) {
+        setVideoUrl(decodeURIComponent(url))
+        setCurrentQuality(quality)
+        setPlayerKey(prev => prev + 1)
+      }
+      
+      // Fetch movie details when component mounts
+      if (params.id) {
+        await fetchMovieDetails(params.id as string)
+      }
     }
     
-    // Fetch movie details when component mounts
-    if (params.id) {
-      fetchMovieDetails(params.id as string)
-    }
+    fetchData()
   }, [params.id, searchParams])
 
   const fetchMovieDetails = async (id: string) => {
     try {
       setLoading(true)
       const response = await fetch(`https://movie-database-nu-ashen.vercel.app/media/${id}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch movie details')
+      }
       const data = await response.json()
       setMovie(data)
-      setLoading(false)
     } catch (error) {
       console.error("Error fetching movie details:", error)
+      setMovie(null)
+    } finally {
       setLoading(false)
     }
   }
@@ -145,9 +153,9 @@ export default function WatchMoviePage() {
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-white mb-2">{movie.title}</h1>
               <div className="flex items-center space-x-4 text-gray-400">
-                <span>{new Date(movie.release_date).getFullYear()}</span>
+                <span>{movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}</span>
                 <span>•</span>
-                <span className="uppercase">{movie.language}</span>
+                <span className="uppercase">{movie.language || 'Unknown'}</span>
               </div>
             </div>
           )}
@@ -198,11 +206,11 @@ export default function WatchMoviePage() {
                 <div className="space-y-3 text-gray-300">
                   <div>
                     <span className="font-semibold text-green-400">Release Date:</span>{" "}
-                    {new Date(movie.release_date).toLocaleDateString()}
+                    {movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}
                   </div>
                   <div>
                     <span className="font-semibold text-green-400">Language:</span>{" "}
-                    {movie.language.toUpperCase()}
+                    {movie.language ? movie.language.toUpperCase() : 'Unknown'}
                   </div>
                 </div>
               </div>
@@ -215,6 +223,8 @@ export default function WatchMoviePage() {
                         href={movie.video_links["720p"]}
                         download
                         className="flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
                         <Download className="w-4 h-4" />
                         <span>Download 720p</span>
@@ -225,6 +235,8 @@ export default function WatchMoviePage() {
                         href={movie.video_links["1080p"]}
                         download
                         className="flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
                         <Download className="w-4 h-4" />
                         <span>Download 1080p</span>
