@@ -3,7 +3,7 @@ import Player from "@/components/plyr-player"
 import { useState, useEffect } from "react"
 import { useParams, useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Download, Play } from "lucide-react"
+import { ArrowLeft, Download } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
@@ -28,50 +28,58 @@ export default function WatchMoviePage() {
   const [videoUrl, setVideoUrl] = useState<string>("")
   const [currentQuality, setCurrentQuality] = useState<string>("720p")
   const [playerKey, setPlayerKey] = useState(0)
-  const [showPlayer, setShowPlayer] = useState(false) // New state to control player visibility
+  const [hasUserInteracted, setHasUserInteracted] = useState(false)
 
   useEffect(() => {
-    const fetchData = async () => {
-      const url = searchParams.get("url")
-      const quality = searchParams.get("quality") || "720p"
-      if (url) {
-        setVideoUrl(decodeURIComponent(url))
-        setCurrentQuality(quality)
-        setPlayerKey(prev => prev + 1)
-      }
-      
-      // Fetch movie details when component mounts
-      if (params.id) {
-        await fetchMovieDetails(params.id as string)
-      }
-    }
+    const url = searchParams.get("url")
+    const quality = searchParams.get("quality") || "720p"
     
-    fetchData()
+    if (url) {
+      setVideoUrl(decodeURIComponent(url))
+      setCurrentQuality(quality)
+    }
+
+    if (params.id) {
+      fetchMovieDetails(params.id as string)
+    }
   }, [params.id, searchParams])
 
   const fetchMovieDetails = async (id: string) => {
     try {
       setLoading(true)
       const response = await fetch(`https://movie-database-nu-ashen.vercel.app/media/${id}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch movie details')
-      }
       const data = await response.json()
-      setMovie(data)
+
+      if (data.status === "success") {
+        setMovie(data.data)
+        if (!videoUrl && data.data.video_links) {
+          // Default to 720p if available
+          const defaultUrl = data.data.video_links["720p"] || data.data.video_links["1080p"] || ""
+          setVideoUrl(defaultUrl)
+        }
+      }
     } catch (error) {
       console.error("Error fetching movie details:", error)
-      setMovie(null)
     } finally {
       setLoading(false)
     }
   }
 
-  // Handle play button click
-  const handlePlayClick = () => {
-    setShowPlayer(true)
+  const handleQualityChange = (quality: string) => {
+    if (movie?.video_links && movie.video_links[quality as keyof typeof movie.video_links]) {
+      setVideoUrl(movie.video_links[quality as keyof typeof movie.video_links] || "")
+      setCurrentQuality(quality)
+      setPlayerKey(prev => prev + 1)
+    }
   }
 
-
+  const handlePlayerReady = () => {
+    // Preload the video for faster playback
+    const videoElement = document.querySelector('video')
+    if (videoElement) {
+      videoElement.preload = 'auto'
+    }
+  }
 
   if (loading) {
     return (
@@ -85,7 +93,7 @@ export default function WatchMoviePage() {
     )
   }
 
-  if (!videoUrl && !movie?.video_links) {
+  if (!videoUrl) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-center">
@@ -100,17 +108,6 @@ export default function WatchMoviePage() {
         </div>
       </div>
     )
-  }
-
-  // Prepare sources for Player component
-  const getPlayerSources = () => {
-    if (movie?.video_links) {
-      return [
-        ...(movie.video_links["1080p"] ? [{ src: movie.video_links["1080p"], type: "video/mp4", size: 1080 }] : []),
-        ...(movie.video_links["720p"] ? [{ src: movie.video_links["720p"], type: "video/mp4", size: 720 }] : []),
-      ]
-    }
-    return [{ src: videoUrl, type: "video/mp4", size: Number.parseInt(currentQuality.replace("p", "")) }]
   }
 
   return (
@@ -132,8 +129,8 @@ export default function WatchMoviePage() {
             </Link>
             <div className="flex items-center space-x-4">
               <Link href={`/movie/${params.id}`}>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
@@ -145,110 +142,120 @@ export default function WatchMoviePage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-6">
+      {/* Video Player */}
+      <main className="container mx-auto px-4 py-8">
         <div className="max-w-6xl mx-auto">
           {/* Movie Title */}
           {movie && (
             <div className="mb-6">
               <h1 className="text-3xl font-bold text-white mb-2">{movie.title}</h1>
-              <div className="flex items-center space-x-4 text-gray-400">
-                <span>{movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}</span>
-                <span>•</span>
-                <span className="uppercase">{movie.language || 'Unknown'}</span>
-              </div>
+              <p className="text-gray-400">
+                {new Date(movie.release_date).getFullYear()} • {movie.language}
+              </p>
             </div>
           )}
 
-          {/* Video Player Section */}
-          <div className="relative bg-black rounded-lg overflow-hidden shadow-2xl">
-            {!showPlayer ? (
-              /* Thumbnail with Play Button */
-              <div className="relative aspect-video bg-gray-900 flex items-center justify-center">
-                {movie?.poster_url && (
-                  <Image
-                    src={movie.poster_url}
-                    alt={movie.title || "Movie poster"}
-                    fill
-                    className="object-cover opacity-60"
-                    priority
-                  />
-                )}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <Button
-                    onClick={handlePlayClick}
-                    className="bg-green-500 hover:bg-green-600 text-black w-20 h-20 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110"
-                  >
-                    <Play className="w-8 h-8 ml-1" />
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              /* Video Player */
-              <div className="aspect-video">
-                <Player
-                  key={playerKey}
-                  sources={getPlayerSources()}
-                  poster={movie?.poster_url}
-                  autoPlay={true}
-                  preload="auto"
-                  defaultQuality={720} // Set default to 720p
-                />
-              </div>
-            )}
+          {/* Quality Selector */}
+          {movie?.video_links && Object.keys(movie.video_links).length > 1 && (
+            <div className="mb-4 flex space-x-2">
+              {Object.keys(movie.video_links).map((quality) => (
+                <Button
+                  key={quality}
+                  variant={currentQuality === quality ? "default" : "outline"}
+                  className={`${
+                    currentQuality === quality
+                      ? "bg-green-500 text-black hover:bg-green-600"
+                      : "border-green-500/30 text-green-400 hover:bg-green-500/10 bg-transparent"
+                  }`}
+                  onClick={() => handleQualityChange(quality)}
+                >
+                  {quality}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          {/* Player */}
+          <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+            <Player
+              key={playerKey}
+              sources={[{ src: videoUrl, type: "video/mp4" }]}
+              poster={movie?.poster_url}
+              onReady={handlePlayerReady}
+              options={{
+                controls: [
+                  'play-large',
+                  'play',
+                  'progress',
+                  'current-time',
+                  'mute',
+                  'volume',
+                  'settings',
+                  'pip',
+                  'fullscreen',
+                ],
+                settings: ['quality', 'speed'],
+                quality: {
+                  default: 720,
+                  options: [720, 1080],
+                },
+                speed: {
+                  selected: 1,
+                  options: [0.5, 0.75, 1, 1.25, 1.5, 2],
+                },
+              }}
+            />
           </div>
 
-          {/* Movie Info */}
-          {movie && showPlayer && (
-            <div className="mt-8 grid md:grid-cols-3 gap-8">
-              <div className="md:col-span-2">
-                <h2 className="text-2xl font-bold text-white mb-4">About this movie</h2>
-                <div className="space-y-3 text-gray-300">
-                  <div>
-                    <span className="font-semibold text-green-400">Release Date:</span>{" "}
-                    {movie.release_date ? new Date(movie.release_date).toLocaleDateString() : 'N/A'}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-green-400">Language:</span>{" "}
-                    {movie.language ? movie.language.toUpperCase() : 'Unknown'}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-xl font-bold text-white">Download Options</h3>
-                {movie.video_links && (
-                  <div className="space-y-2">
-                    {movie.video_links["720p"] && (
-                      <a
-                        href={movie.video_links["720p"]}
-                        download
-                        className="flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors"
-                        target="_blank"
-                        rel="noopener noreferrer"
+          {/* Download Options */}
+          {movie && (
+            <div className="mt-6 p-4 bg-gray-900/50 rounded-lg border border-green-500/20">
+              <h3 className="text-lg font-semibold text-green-400 mb-3">Download Options</h3>
+              <div className="flex flex-wrap gap-3">
+                {movie.video_links ? (
+                  Object.entries(movie.video_links).map(([quality, url]) => (
+                    <Link
+                      key={quality}
+                      href={`/download/movie/${params.id}?url=${encodeURIComponent(url)}&quality=${quality}&title=${encodeURIComponent(movie.title)}`}
+                    >
+                      <Button
+                        variant="outline"
+                        className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
                       >
-                        <Download className="w-4 h-4" />
-                        <span>Download 720p</span>
-                      </a>
-                    )}
-                    {movie.video_links["1080p"] && (
-                      <a
-                        href={movie.video_links["1080p"]}
-                        download
-                        className="flex items-center space-x-2 text-green-400 hover:text-green-300 transition-colors"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Download 1080p</span>
-                      </a>
-                    )}
-                  </div>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download {quality}
+                      </Button>
+                    </Link>
+                  ))
+                ) : (
+                  <Link
+                    href={`/download/movie/${params.id}?url=${encodeURIComponent(videoUrl)}&quality=${currentQuality}&title=${encodeURIComponent(movie.title)}`}
+                  >
+                    <Button
+                      variant="outline"
+                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Current Quality
+                    </Button>
+                  </Link>
                 )}
               </div>
             </div>
           )}
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 border-t border-green-500/20 py-8 mt-16">
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-gray-400 text-sm mb-2">© 2025 Filmzi. All rights reserved.</p>
+          <p className="text-gray-500 text-xs max-w-2xl mx-auto">
+            Our website does not host any movie links or movies on our servers. Everything is from third party sources.
+            We are not responsible for any content.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
