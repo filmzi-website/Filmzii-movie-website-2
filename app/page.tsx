@@ -68,19 +68,20 @@ export default function HomePage() {
         const heroCandidates = movies2025.length > 0 ? movies2025.slice(0, 7) : allMovies.slice(0, 7)
         setHeroMovies(heroCandidates)
 
-        // Get 2025 content for main sections (latest added first)
+        // Get 2025 content for main sections (latest added first) - LIMITED TO 10
         const movies2025Latest = allMovies.filter(
           (item: Movie) => item.release_date?.startsWith("2025")
-        );
+        ).slice(0, 10); // Limit to 10 movies only
+
         const tv2025Latest = allTV.filter(
           (item: Movie) => item.release_date?.startsWith("2025")
-        );
+        ).slice(0, 10); // Limit to 10 TV series only
 
-        // Use 2025 content if available, otherwise show latest added content
-        setMovies(movies2025Latest.length > 0 ? movies2025Latest : allMovies.slice(0, 50))
-        setTvSeries(tv2025Latest.length > 0 ? tv2025Latest : allTV.slice(0, 50))
+        // Use 2025 content if available, otherwise show latest added content (limited to 10)
+        setMovies(movies2025Latest.length > 0 ? movies2025Latest : allMovies.slice(0, 10))
+        setTvSeries(tv2025Latest.length > 0 ? tv2025Latest : allTV.slice(0, 10))
 
-        console.log(`Latest Movies (2025):`, movies2025Latest.length)
+        console.log(`Latest Movies (2025) - Limited to 10:`, movies2025Latest.length)
         console.log("Hero movies:", heroCandidates.length)
       }
     } catch (error) {
@@ -115,11 +116,16 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl md:text-3xl font-bold text-green-400">{title}</h3>
+            {!searchQuery && (
+              <p className="text-sm text-gray-400">
+                Showing latest 10 • Use search to find more
+              </p>
+            )}
           </div>
 
           {loading ? (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
-              {[...Array(12)].map((_, i) => (
+              {[...Array(10)].map((_, i) => (
                 <div key={i} className="animate-pulse">
                   <div className="bg-gray-800 aspect-[2/3] rounded-lg mb-3"></div>
                   <div className="bg-gray-800 h-4 rounded mb-2"></div>
@@ -221,13 +227,13 @@ export default function HomePage() {
                 <Search className="absolute left-2 md:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <Input
                   type="text"
-                  placeholder="Search..."
+                  placeholder="Search for more movies..."
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value)
                     handleSearch(e.target.value)
                   }}
-                  className="pl-8 md:pl-10 bg-gray-900 border-green-500/30 text-white placeholder-gray-400 focus:border-green-400 w-32 md:w-64 text-sm"
+                  className="pl-8 md:pl-10 bg-gray-900 border-green-500/30 text-white placeholder-gray-400 focus:border-green-400 w-40 md:w-64 text-sm"
                 />
               </div>
 
