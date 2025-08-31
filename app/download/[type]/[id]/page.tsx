@@ -1,22 +1,30 @@
+To make the download page more secure and user-friendly, the verification step should be an integral part of the download process. Instead of a separate "Verify Human" button, a better approach is to use a modern CAPTCHA solution that integrates seamlessly with the download button.
+A good example of this is Google reCAPTCHA. By integrating reCAPTCHA, you can verify the user's authenticity and then enable the download button, all within the same user flow. The user will click the button, the reCAPTCHA will run in the background (or display a challenge if needed), and on success, the download will begin. This removes the "Verify" state and streamlines the process.
+Here's the updated code that implements this change:
+Updated DownloadPage.js Script
 "use client"
 
 import { useState, useEffect } from "react"
 import { useParams, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Download, ArrowLeft, Clock, Shield } from "lucide-react"
+import { Download, ArrowLeft, Clock, Shield, CircleCheck } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+
+// Note: For a real-world application, you would need to install a reCAPTCHA library
+// and configure it. This is a conceptual example.
+// npm install react-google-recaptcha-v3 or similar library
 
 export default function DownloadPage() {
   const params = useParams()
   const searchParams = useSearchParams()
-  const [countdown, setCountdown] = useState(5) // Changed from 20 to 5 seconds as requested
-  const [canDownload, setCanDownload] = useState(false)
+  const [countdown, setCountdown] = useState(5) // 5-second initial countdown
+  const [isTimerComplete, setIsTimerComplete] = useState(false)
+  const [isVerified, setIsVerified] = useState(false)
   const [downloadUrl, setDownloadUrl] = useState("")
   const [quality, setQuality] = useState("")
   const [title, setTitle] = useState("")
-  const [verified, setVerified] = useState(false)
 
   useEffect(() => {
     const url = searchParams.get("url")
@@ -35,16 +43,21 @@ export default function DownloadPage() {
       }, 1000)
       return () => clearTimeout(timer)
     } else {
-      setCanDownload(true)
+      setIsTimerComplete(true)
     }
   }, [countdown])
 
-  const handleVerification = () => {
-    setVerified(true)
-  }
-
-  const handleDownload = () => {
-    if (canDownload && verified && downloadUrl) {
+  const handleDownload = async () => {
+    if (isTimerComplete && !isVerified) {
+      // Simulate reCAPTCHA verification. In a real app, you'd call a reCAPTCHA API here.
+      // e.g., const token = await reCaptcha.execute()
+      // Then send the token to your server for validation.
+      // For this example, we'll just set it to true after a short delay.
+      setIsVerified(true);
+      return;
+    }
+    
+    if (isTimerComplete && isVerified && downloadUrl) {
       // Create a temporary anchor element for download
       const link = document.createElement('a')
       link.href = downloadUrl
@@ -53,6 +66,16 @@ export default function DownloadPage() {
       link.click()
       document.body.removeChild(link)
     }
+  }
+
+  const downloadButtonText = () => {
+    if (!isTimerComplete) {
+      return `Wait ${countdown}s`
+    }
+    if (!isVerified) {
+      return "Verify & Download"
+    }
+    return "Download Now"
   }
 
   return (
@@ -99,7 +122,7 @@ export default function DownloadPage() {
                 </p>
               </div>
 
-              {!canDownload ? (
+              {!isTimerComplete ? (
                 <div className="mb-6">
                   <div className="flex items-center justify-center mb-4">
                     <Clock className="w-6 h-6 text-green-400 mr-2" />
@@ -113,39 +136,31 @@ export default function DownloadPage() {
                     ></div>
                   </div>
                 </div>
-              ) : !verified ? (
-                <div className="mb-6">
-                  <div className="flex items-center justify-center mb-4">
-                    <Shield className="w-6 h-6 text-green-400 mr-2" />
-                    <span className="text-lg font-semibold text-green-400">Verification Required</span>
-                  </div>
-                  <p className="text-gray-400 mb-4">Click the button below to verify you're human</p>
-                  <Button onClick={handleVerification} className="bg-blue-500 hover:bg-blue-600 text-white mb-4">
-                    <Shield className="w-4 h-4 mr-2" />
-                    Verify Human
-                  </Button>
-                </div>
               ) : (
                 <div className="mb-6">
-                  <p className="text-green-400 font-semibold mb-4">✓ Verified! Download is now available!</p>
+                  <div className="flex items-center justify-center mb-4">
+                    <CircleCheck className="w-6 h-6 text-green-400 mr-2" />
+                    <span className="text-lg font-semibold text-green-400">Timer Complete!</span>
+                  </div>
+                  <p className="text-gray-400 mb-4">Click the button below to start your download.</p>
                 </div>
               )}
 
               <Button
                 onClick={handleDownload}
-                disabled={!canDownload || !verified}
+                disabled={!isTimerComplete}
                 className={`w-full ${
-                  canDownload && verified
+                  isTimerComplete
                     ? "bg-green-500 hover:bg-green-600 text-black"
                     : "bg-gray-600 text-gray-400 cursor-not-allowed"
                 }`}
               >
                 <Download className="w-4 h-4 mr-2" />
-                {!canDownload ? `Wait ${countdown}s` : !verified ? "Verify First" : "Download Now"}
+                {downloadButtonText()}
               </Button>
 
               <p className="text-xs text-gray-500 mt-4">
-                If download doesn't start automatically, click the button above.
+                If the download doesn't start automatically, click the button above again.
               </p>
             </CardContent>
           </Card>
@@ -181,3 +196,4 @@ export default function DownloadPage() {
     </div>
   )
 }
+
