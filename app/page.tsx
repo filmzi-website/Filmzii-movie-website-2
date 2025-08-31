@@ -8,32 +8,40 @@ import { Search, Download, Play, MessageCircle, Send } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
-interface Movie {
+// The new JSON structure requires an updated interface.
+interface Media {
   id: number
   type: "movie" | "tv"
   title: string
   description: string
-  poster_url: string
-  release_date: string
+  thumbnail: string
+  release_date: string | null
   language: string
   video_links?: {
-    "720p": string
-    "1080p": string
+    "720p"?: string
+    "1080p"?: string
+    "2160p"?: string
+  }
+  download_links?: {
+    "download_720p"?: { url: string; file_type: string }
+    "download_1080p"?: { url: string; file_type: string }
+    "download_2160p"?: { url: string; file_type: string }
   }
   seasons?: any
 }
 
 export default function HomePage() {
-  const [movies, setMovies] = useState<Movie[]>([])
-  const [tvSeries, setTvSeries] = useState<Movie[]>([])
-  const [heroMovies, setHeroMovies] = useState<Movie[]>([])
+  const [media, setMedia] = useState<Media[]>([])
+  const [movies, setMovies] = useState<Media[]>([])
+  const [tvSeries, setTvSeries] = useState<Media[]>([])
+  const [heroMovies, setHeroMovies] = useState<Media[]>([])
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [searchResults, setSearchResults] = useState<Movie[]>([])
+  const [searchResults, setSearchResults] = useState<Media[]>([])
 
   useEffect(() => {
-    fetchMovies()
+    fetchMedia()
   }, [])
 
   useEffect(() => {
@@ -45,72 +53,59 @@ export default function HomePage() {
     }
   }, [heroMovies.length])
 
-  const fetchMovies = async () => {
+  const fetchMedia = async () => {
     try {
-      const response = await fetch("https://movie-database-nu-ashen.vercel.app/media")
-      const data = await response.json()
-      if (data.status === "success") {
-        const allMedia = data.data
+      // The new API endpoint to fetch all movies and TV shows.
+      const response = await fetch("https://databaseuiy.vercel.app/api/media")
+      const allMedia: Media[] = await response.json()
 
-        // Sort all media by ID (latest added first - assuming higher ID = newer)
-        const sortedByLatest = allMedia.sort((a: Movie, b: Movie) => b.id - a.id)
+      // Set the full list of media for client-side searching
+      setMedia(allMedia);
 
-        // Extract movies and TV series from sorted data
-        const allMovies = sortedByLatest.filter((item: Movie) => item.type === "movie")
-        const allTV = sortedByLatest.filter((item: Movie) => item.type === "tv")
+      // Sort all media by ID (latest added first - assuming higher ID = newer)
+      const sortedByLatest = allMedia.sort((a, b) => b.id - a.id)
 
-        // Filter 2025 movies for hero section (from latest added)
-        const movies2025 = allMovies.filter(movie => 
-          movie.release_date?.startsWith("2025")
-        );
-        
-        // Use 2025 movies for hero, fallback to latest movies if no 2025 content
-        const heroCandidates = movies2025.length > 0 ? movies2025.slice(0, 7) : allMovies.slice(0, 7)
-        setHeroMovies(heroCandidates)
+      // Extract movies and TV series from sorted data
+      const allMovies = sortedByLatest.filter((item) => item.type === "movie")
+      const allTV = sortedByLatest.filter((item) => item.type === "tv")
 
-        // Get 2025 content for main sections (latest added first) - LIMITED TO 10
-        const movies2025Latest = allMovies.filter(
-          (item: Movie) => item.release_date?.startsWith("2025")
-        ).slice(0, 10); // Limit to 10 movies only
+      // Filter 2025 content based on the new date format
+      const movies2025 = allMovies.filter(item => 
+        item.release_date?.includes("2025")
+      )
+      const tv2025 = allTV.filter(item => 
+        item.release_date?.includes("2025")
+      )
 
-        const tv2025Latest = allTV.filter(
-          (item: Movie) => item.release_date?.startsWith("2025")
-        ).slice(0, 10); // Limit to 10 TV series only
+      // Use 2025 content for hero and main sections, with fallbacks
+      const heroCandidates = movies2025.length > 0 ? movies2025.slice(0, 7) : allMovies.slice(0, 7)
+      setHeroMovies(heroCandidates)
 
-        // Use 2025 content if available, otherwise show latest added content (limited to 10)
-        setMovies(movies2025Latest.length > 0 ? movies2025Latest : allMovies.slice(0, 10))
-        setTvSeries(tv2025Latest.length > 0 ? tv2025Latest : allTV.slice(0, 10))
+      setMovies(movies2025.length > 0 ? movies2025.slice(0, 10) : allMovies.slice(0, 10))
+      setTvSeries(tv2025.length > 0 ? tv2025.slice(0, 10) : allTV.slice(0, 10))
 
-        console.log(`Latest Movies (2025) - Limited to 10:`, movies2025Latest.length)
-        console.log("Hero movies:", heroCandidates.length)
-      }
     } catch (error) {
-      console.error("Error fetching movies:", error)
+      console.error("Error fetching media:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleSearch = async (query: string) => {
+  const handleSearch = (query: string) => {
     if (!query.trim()) {
       setSearchResults([])
       return
     }
 
-    try {
-      const response = await fetch(
-        `https://movie-database-nu-ashen.vercel.app/search?q=${encodeURIComponent(query)}`,
-      )
-      const data = await response.json()
-      if (data.status === "success") {
-        setSearchResults(data.results)
-      }
-    } catch (error) {
-      console.error("Error searching:", error)
-    }
+    // The new API doesn't have a search endpoint, so we perform a client-side search on the fetched data.
+    const filteredResults = media.filter(item =>
+      item.title.toLowerCase().includes(query.toLowerCase())
+    )
+    setSearchResults(filteredResults)
   }
 
-  const MovieGrid = ({ title, items, loading }: { title: string; items: Movie[]; loading: boolean }) => {
+  // The MovieGrid component is now MediaGrid and accepts an array of Media items
+  const MovieGrid = ({ title, items, loading }: { title: string; items: Media[]; loading: boolean }) => {
     return (
       <section className="py-6">
         <div className="container mx-auto px-4">
@@ -135,14 +130,15 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 md:gap-6">
-              {items.map((movie) => (
-                <Link key={movie.id} href={`/${movie.type}/${movie.id}`} className="block">
+              {items.map((mediaItem) => (
+                <Link key={mediaItem.id} href={`/${mediaItem.type}/${mediaItem.id}`} className="block">
                   <Card className="bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group cursor-pointer">
                     <CardContent className="p-0">
                       <div className="relative overflow-hidden rounded-t-lg">
                         <Image
-                          src={movie.poster_url || "/placeholder.svg"}
-                          alt={movie.title}
+                          // Updated from poster_url to thumbnail
+                          src={mediaItem.thumbnail || "/placeholder.svg"}
+                          alt={mediaItem.title}
                           width={200}
                           height={300}
                           className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
@@ -157,7 +153,8 @@ export default function HomePage() {
                               <Play className="w-4 h-4 mr-1" />
                               Watch
                             </Button>
-                            {movie.video_links && (
+                            {/* The download links are now an object, so we check for its existence */}
+                            {mediaItem.download_links && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -176,17 +173,18 @@ export default function HomePage() {
                         <div className="absolute top-2 left-2">
                           <span
                             className={`px-2 py-1 text-xs font-semibold rounded ${
-                              movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
+                              mediaItem.type === "movie" ? "bg-blue-500" : "bg-purple-500"
                             }`}
                           >
-                            {movie.type === "movie" ? "Movie" : "TV"}
+                            {mediaItem.type === "movie" ? "Movie" : "TV"}
                           </span>
                         </div>
                       </div>
                       <div className="p-3">
-                        <h4 className="font-semibold text-white mb-1 text-sm line-clamp-2">{movie.title}</h4>
-                        <p className="text-xs text-gray-400 mb-1">{movie.release_date?.split("-")[0]}</p>
-                        <p className="text-xs text-green-400">{movie.language}</p>
+                        <h4 className="font-semibold text-white mb-1 text-sm line-clamp-2">{mediaItem.title}</h4>
+                        {/* Adjusted to handle the new date format */}
+                        <p className="text-xs text-gray-400 mb-1">{mediaItem.release_date ? new Date(mediaItem.release_date).getFullYear() : 'N/A'}</p>
+                        <p className="text-xs text-green-400">{mediaItem.language}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -292,7 +290,8 @@ export default function HomePage() {
         <section className="relative h-[50vh] md:h-[70vh] overflow-hidden">
           <div className="absolute inset-0">
             <Image
-              src={heroMovies[currentHeroIndex]?.poster_url || "/placeholder.svg"}
+              // Updated from poster_url to thumbnail
+              src={heroMovies[currentHeroIndex]?.thumbnail || "/placeholder.svg"}
               alt={heroMovies[currentHeroIndex]?.title || "Hero Movie"}
               fill
               className="object-cover"
@@ -379,14 +378,15 @@ export default function HomePage() {
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
-                {searchResults.map((movie) => (
-                  <Link key={movie.id} href={`/${movie.type}/${movie.id}`}>
+                {searchResults.map((mediaItem) => (
+                  <Link key={mediaItem.id} href={`/${mediaItem.type}/${mediaItem.id}`}>
                     <Card className="bg-gray-900 border-green-500/20 hover:border-green-400/50 transition-all duration-300 group cursor-pointer">
                       <CardContent className="p-0">
                         <div className="relative overflow-hidden rounded-t-lg">
+                          {/* Updated from poster_url to thumbnail */}
                           <Image
-                            src={movie.poster_url || "/placeholder.svg"}
-                            alt={movie.title}
+                            src={mediaItem.thumbnail || "/placeholder.svg"}
+                            alt={mediaItem.title}
                             width={300}
                             height={450}
                             className="w-full aspect-[2/3] object-cover group-hover:scale-105 transition-transform duration-300"
@@ -401,7 +401,8 @@ export default function HomePage() {
                                 <Play className="w-4 h-4 mr-1" />
                                 Watch
                               </Button>
-                              {movie.video_links && (
+                              {/* The download links are now an object, so we check for its existence */}
+                              {mediaItem.download_links && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -420,19 +421,19 @@ export default function HomePage() {
                           <div className="absolute top-2 left-2">
                             <span
                               className={`px-2 py-1 text-xs font-semibold rounded ${
-                                movie.type === "movie" ? "bg-blue-500" : "bg-purple-500"
+                                mediaItem.type === "movie" ? "bg-blue-500" : "bg-purple-500"
                               }`}
                             >
-                              {movie.type === "movie" ? "Movie" : "TV Series"}
+                              {mediaItem.type === "movie" ? "Movie" : "TV Series"}
                             </span>
                           </div>
                         </div>
                         <div className="p-3 md:p-4">
                           <h4 className="font-semibold text-white mb-2 line-clamp-2 text-sm md:text-base">
-                            {movie.title}
+                            {mediaItem.title}
                           </h4>
-                          <p className="text-xs md:text-sm text-gray-400 mb-2">{movie.release_date?.split("-")[0]}</p>
-                          <p className="text-xs text-green-400">{movie.language}</p>
+                          <p className="text-xs md:text-sm text-gray-400 mb-2">{mediaItem.release_date ? new Date(mediaItem.release_date).getFullYear() : 'N/A'}</p>
+                          <p className="text-xs text-green-400">{mediaItem.language}</p>
                         </div>
                       </CardContent>
                     </Card>
