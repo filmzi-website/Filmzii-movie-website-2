@@ -5,11 +5,10 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Download, Play, ArrowLeft, Calendar, Globe, Star, Users } from "lucide-react"
+import { ArrowLeft, Calendar, Globe, Star, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
-// Updated interface to match the new JSON structure
 interface Movie {
   id: number
   type: "movie" | "tv"
@@ -24,16 +23,6 @@ interface Movie {
     image: string
     name: string
   }[]
-  video_links?: {
-    "720p"?: string
-    "1080p"?: string
-    "2160p"?: string
-  }
-  download_links?: {
-    "download_720p"?: { url: string; file_type: string }
-    "download_1080p"?: { url: string; file_type: string }
-    "download_2160p"?: { url: string; file_type: string }
-  }
   seasons?: any
   total_seasons?: number
 }
@@ -53,11 +42,9 @@ export default function MovieDetailsPage() {
 
   const fetchMovieDetails = async (id: string) => {
     try {
-      // Changed API endpoint to the new one
       const response = await fetch(`https://databaseuiy.vercel.app/api/media/${id}`)
       const data: Movie = await response.json()
 
-      // The new API returns the movie object directly if successful, or an error if not found.
       if (data && data.id) {
         setMovie(data)
       } else {
@@ -68,16 +55,6 @@ export default function MovieDetailsPage() {
       setError("Failed to load movie details")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleWatch = () => {
-    // Check for the highest quality video link first, then fallback
-    if (movie?.video_links) {
-      const videoUrl = movie.video_links["2160p"] || movie.video_links["1080p"] || movie.video_links["720p"]
-      if (videoUrl) {
-        router.push(`/watch/${movie.type}/${movie.id}?url=${encodeURIComponent(videoUrl)}`)
-      }
     }
   }
 
@@ -94,10 +71,6 @@ export default function MovieDetailsPage() {
                 <div className="bg-gray-800 h-8 rounded w-3/4"></div>
                 <div className="bg-gray-800 h-4 rounded w-1/2"></div>
                 <div className="bg-gray-800 h-32 rounded"></div>
-                <div className="flex gap-4">
-                  <div className="bg-gray-800 h-10 rounded w-24"></div>
-                  <div className="bg-gray-800 h-10 rounded w-24"></div>
-                </div>
               </div>
             </div>
           </div>
@@ -153,7 +126,6 @@ export default function MovieDetailsPage() {
           <div className="w-full lg:w-1/3">
             <Card className="bg-gray-900 border-green-500/20 overflow-hidden">
               <CardContent className="p-0">
-                {/* Changed from poster_url to thumbnail */}
                 <Image
                   src={movie.thumbnail || "/placeholder.svg"}
                   alt={movie.title}
@@ -181,14 +153,12 @@ export default function MovieDetailsPage() {
                 <div className="flex items-center gap-4 text-gray-400">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {/* Adjusted to handle the new date format */}
                     <span>{movie.release_date ? new Date(movie.release_date).getFullYear() : 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Globe className="w-4 h-4" />
                     <span>{movie.language}</span>
                   </div>
-                  {/* Added a new element for rating */}
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 text-yellow-400" />
                     <span>{movie.rating}</span>
@@ -200,81 +170,6 @@ export default function MovieDetailsPage() {
               <div>
                 <h2 className="text-xl font-semibold text-green-400 mb-3">Overview</h2>
                 <p className="text-gray-300 leading-relaxed">{movie.description}</p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-green-400">Watch & Download</h3>
-
-                {/* Watch Button */}
-                {(movie.video_links?.["720p"] || movie.video_links?.["1080p"] || movie.video_links?.["2160p"]) && (
-                  <div className="flex flex-wrap gap-3">
-                    <Button
-                      onClick={handleWatch}
-                      className="bg-green-500 hover:bg-green-600 text-black font-semibold px-6 py-3"
-                    >
-                      <Play className="w-5 h-5 mr-2" />
-                      Watch Now
-                    </Button>
-                  </div>
-                )}
-
-                {/* Download Buttons */}
-                {movie.download_links && (
-                  <div className="space-y-3">
-                    <h4 className="text-md font-medium text-white">Download Options:</h4>
-                    <div className="flex flex-wrap gap-3">
-                      {movie.download_links["download_720p"] && (
-                        <Link
-                          href={movie.download_links["download_720p"].url}
-                          target="_blank"
-                        >
-                          <Button
-                            variant="outline"
-                            className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent px-6 py-3"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download 720p
-                          </Button>
-                        </Link>
-                      )}
-                      {movie.download_links["download_1080p"] && (
-                        <Link
-                          href={movie.download_links["download_1080p"].url}
-                          target="_blank"
-                        >
-                          <Button
-                            variant="outline"
-                            className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent px-6 py-3"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download 1080p
-                          </Button>
-                        </Link>
-                      )}
-                      {movie.download_links["download_2160p"] && (
-                        <Link
-                          href={movie.download_links["download_2160p"].url}
-                          target="_blank"
-                        >
-                          <Button
-                            variant="outline"
-                            className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent px-6 py-3"
-                          >
-                            <Download className="w-4 h-4 mr-2" />
-                            Download 2160p
-                          </Button>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {!movie.video_links && !movie.download_links && (
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                    <p className="text-yellow-400">Links are not available for this movie yet.</p>
-                  </div>
-                )}
               </div>
 
               {/* Cast Section */}
