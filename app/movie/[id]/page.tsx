@@ -72,10 +72,12 @@ export default function MovieDetailsPage() {
   }
 
   const handleWatch = () => {
-    // The video links are now nested under a `video_links` object
-    if (movie?.video_links?.["1080p"] || movie?.video_links?.["720p"]) {
-      const videoUrl = movie.video_links["1080p"] || movie.video_links["720p"]
-      router.push(`/watch/${movie.type}/${movie.id}?url=${encodeURIComponent(videoUrl)}`)
+    // Check for the highest quality video link first, then fallback
+    if (movie?.video_links) {
+      const videoUrl = movie.video_links["2160p"] || movie.video_links["1080p"] || movie.video_links["720p"]
+      if (videoUrl) {
+        router.push(`/watch/${movie.type}/${movie.id}?url=${encodeURIComponent(videoUrl)}`)
+      }
     }
   }
 
