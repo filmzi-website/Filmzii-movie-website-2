@@ -5,14 +5,22 @@ import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Download, Play, ArrowLeft, Calendar, Globe, Star, ChevronDown, ChevronUp } from "lucide-react"
+import { Download, Play, ArrowLeft, Calendar, Globe, Star, ChevronDown, ChevronUp, Users } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 
 interface Episode {
   episode_number: number
-  video_720p?: string
-  video_1080p?: string
+  video_links?: {
+    "720p"?: string
+    "1080p"?: string
+    "2160p"?: string
+  }
+  download_links?: {
+    "download_720p"?: { url: string; file_type: string }
+    "download_1080p"?: { url: string; file_type: string }
+    "download_2160p"?: { url: string; file_type: string }
+  }
 }
 
 interface Season {
@@ -26,13 +34,17 @@ interface TVSeries {
   type: string
   title: string
   description: string
-  poster_url: string
-  release_date: string
+  thumbnail: string
+  release_date: string | null
   language: string
-  total_seasons: number
-  tmdb_id: number
+  rating: string
+  cast_members: {
+    character: string
+    image: string
+    name: string
+  }[]
   seasons: Record<string, Season>
-  created_at: string
+  total_seasons: number
 }
 
 export default function TVSeriesDetailsPage() {
@@ -51,23 +63,17 @@ export default function TVSeriesDetailsPage() {
 
   const fetchTVSeriesDetails = async (id: string) => {
     try {
-      console.log("[v0] Fetching TV series details for ID:", id)
-      const response = await fetch(`https://movie-database-nu-ashen.vercel.app/media/${id}`)
-      const data = await response.json()
+      // New API endpoint for media details
+      const response = await fetch(`https://databaseuiy.vercel.app/api/media/${id}`)
+      const data: TVSeries = await response.json()
 
-      console.log("[v0] TV series API response:", data)
-      console.log("[v0] Response status:", data.status)
-      console.log("[v0] Response data:", data.data)
-
-      if (data.status === "success" && data.data) {
-        console.log("[v0] Data found, accepting as TV series since accessed via /tv/ route")
-        setTVSeries(data.data)
+      if (data && data.id) {
+        setTVSeries(data)
       } else {
-        console.log("[v0] API error or no data:", data)
         setError("TV Series not found")
       }
     } catch (error) {
-      console.error("[v0] Error fetching TV series details:", error)
+      console.error("Error fetching TV series details:", error)
       setError("Failed to load TV series details")
     } finally {
       setLoading(false)
@@ -126,8 +132,7 @@ export default function TVSeriesDetailsPage() {
     )
   }
 
-  // FIX: Calculate max season number from season objects
-  const seasonNumbers = tvSeries?.seasons 
+  const seasonNumbers = tvSeries?.seasons
     ? Object.values(tvSeries.seasons).map(season => season.season_number)
     : [];
   const maxSeasonNumber = seasonNumbers.length > 0 ? Math.max(...seasonNumbers) : 0;
@@ -163,7 +168,8 @@ export default function TVSeriesDetailsPage() {
             <Card className="bg-gray-900 border-green-500/20 overflow-hidden">
               <CardContent className="p-0">
                 <Image
-                  src={tvSeries?.poster_url || "/placeholder.svg"}
+                  // Updated from poster_url to thumbnail
+                  src={tvSeries?.thumbnail || "/placeholder.svg"}
                   alt={tvSeries?.title || "TV Series"}
                   width={400}
                   height={600}
@@ -185,6 +191,7 @@ export default function TVSeriesDetailsPage() {
                 <div className="flex items-center gap-4 text-gray-400">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
+                    {/* Adjusted to handle the new date format */}
                     <span>{tvSeries?.release_date ? new Date(tvSeries.release_date).getFullYear() : "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -192,7 +199,11 @@ export default function TVSeriesDetailsPage() {
                     <span>{tvSeries?.language || "N/A"}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4" />
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    <span>{tvSeries?.rating || "N/A"}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <ChevronUp className="w-4 h-4" />
                     <span>
                       {maxSeasonNumber} Season
                       {maxSeasonNumber > 1 ? "s" : ""}
@@ -206,6 +217,28 @@ export default function TVSeriesDetailsPage() {
                 <h2 className="text-xl font-semibold text-green-400 mb-3">Overview</h2>
                 <p className="text-gray-300 leading-relaxed">{tvSeries?.description || "No description available."}</p>
               </div>
+
+              {/* Cast Section */}
+              {tvSeries?.cast_members && tvSeries.cast_members.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-semibold text-green-400 mb-3">Cast</h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                    {tvSeries.cast_members.map((member: any, index: number) => (
+                      <div key={index} className="flex flex-col items-center text-center">
+                        <Image
+                          src={member.image || "/placeholder-actor.svg"}
+                          alt={member.name}
+                          width={100}
+                          height={100}
+                          className="rounded-full object-cover w-20 h-20 mb-2"
+                        />
+                        <p className="font-medium text-white text-sm line-clamp-1">{member.name}</p>
+                        <p className="text-xs text-gray-400 line-clamp-1">{member.character}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Additional Info */}
               <div className="bg-gray-900/50 rounded-lg p-6 border border-green-500/20">
@@ -228,10 +261,8 @@ export default function TVSeriesDetailsPage() {
                     </span>
                   </div>
                   <div>
-                    <span className="text-gray-400">Added:</span>
-                    <span className="text-white ml-2">
-                      {tvSeries?.created_at ? new Date(tvSeries.created_at).toLocaleDateString() : "N/A"}
-                    </span>
+                    <span className="text-gray-400">Rating:</span>
+                    <span className="text-white ml-2">{tvSeries?.rating || "N/A"}</span>
                   </div>
                 </div>
               </div>
@@ -273,11 +304,12 @@ export default function TVSeriesDetailsPage() {
                                 <h4 className="font-medium text-white mb-1">Episode {episode.episode_number}</h4>
                               </div>
                               <div className="flex items-center gap-2">
-                                {(episode.video_720p || episode.video_1080p) && (
+                                {/* WATCH BUTTONS (from video_links) */}
+                                {(episode.video_links?.["720p"] || episode.video_links?.["1080p"] || episode.video_links?.["2160p"]) && (
                                   <Button
                                     onClick={() =>
                                       handleWatch(
-                                        episode.video_1080p || episode.video_720p!,
+                                        episode.video_links?.["1080p"] || episode.video_links?.["720p"] || episode.video_links?.["2160p"]!,
                                         season.season_number,
                                         episode.episode_number,
                                       )
@@ -289,33 +321,51 @@ export default function TVSeriesDetailsPage() {
                                     Watch
                                   </Button>
                                 )}
-                                {episode.video_720p && (
-                                  <Link
-                                    href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_720p)}&quality=720p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
-                                  >
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
-                                    >
-                                      <Download className="w-4 h-4 mr-1" />
-                                      720p
-                                    </Button>
-                                  </Link>
+
+                                {/* DOWNLOAD BUTTONS (from download_links) */}
+                                {episode.download_links && (
+                                  <>
+                                    {episode.download_links["download_720p"] && (
+                                      <Link href={episode.download_links["download_720p"].url} target="_blank">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                        >
+                                          <Download className="w-4 h-4 mr-1" />
+                                          720p
+                                        </Button>
+                                      </Link>
+                                    )}
+                                    {episode.download_links["download_1080p"] && (
+                                      <Link href={episode.download_links["download_1080p"].url} target="_blank">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                        >
+                                          <Download className="w-4 h-4 mr-1" />
+                                          1080p
+                                        </Button>
+                                      </Link>
+                                    )}
+                                    {episode.download_links["download_2160p"] && (
+                                      <Link href={episode.download_links["download_2160p"].url} target="_blank">
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
+                                        >
+                                          <Download className="w-4 h-4 mr-1" />
+                                          2160p
+                                        </Button>
+                                      </Link>
+                                    )}
+                                  </>
                                 )}
-                                {episode.video_1080p && (
-                                  <Link
-                                    href={`/download/tv/${tvSeries.id}?url=${encodeURIComponent(episode.video_1080p)}&quality=1080p&title=${encodeURIComponent(`${tvSeries.title} S${season.season_number}E${episode.episode_number}`)}`}
-                                  >
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="border-green-500/50 text-green-400 hover:bg-green-500/10 bg-transparent"
-                                    >
-                                      <Download className="w-4 h-4 mr-1" />
-                                      1080p
-                                    </Button>
-                                  </Link>
+
+                                {!episode.video_links && !episode.download_links && (
+                                  <span className="text-sm text-gray-500">Links not available</span>
                                 )}
                               </div>
                             </div>
